@@ -1,5 +1,6 @@
 // 모든 화면 맨 위의 제목과 메뉴 (서버 컴포넌트).
 import Link from "next/link";
+import { logout } from "./login/actions";
 
 const MENU = [
   { href: "/", label: "숫자", key: "numbers" },
@@ -25,6 +26,14 @@ export default function SiteHeader({ current }: { current: (typeof MENU)[number]
             {m.label}
           </Link>
         ))}
+        <form action={logout}>
+          <button
+            type="submit"
+            className="rounded border border-zinc-300 px-3 py-1 hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
+          >
+            나가기
+          </button>
+        </form>
       </nav>
     </header>
   );
