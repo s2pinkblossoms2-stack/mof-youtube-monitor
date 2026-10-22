@@ -1,6 +1,6 @@
 // 수집 5분 뒤 실행 (한국 시간 09:35 / 13:35 / 16:35):
-// ① 실패한 영상만 다시 받고 ② 새 댓글을 모아 분류한다. 답글 초안 생성은 다음 단계에서 이어 붙인다.
-import { classifyPending, collectNewComments } from "@/lib/comments/pipeline";
+// ① 실패한 영상만 다시 받고 ② 새 댓글을 모아 분류하고 ③ 질문 댓글에 답글 초안을 만든다.
+import { classifyPending, collectNewComments, draftPending } from "@/lib/comments/pipeline";
 import { runRetry } from "@/lib/collect";
 import { checkCronAuth, errorResponse } from "@/lib/cron";
 
@@ -19,7 +19,8 @@ export async function GET(request: Request) {
     try {
       const collected = await collectNewComments(now, deadline);
       const classified = await classifyPending(deadline);
-      comments = { status: "done", collected, ...classified };
+      const drafts = await draftPending(deadline);
+      comments = { status: "done", collected, ...classified, drafts };
     } catch (error) {
       console.error("댓글 단계 오류:", error instanceof Error ? error.message : error);
       comments = { status: "failed" };

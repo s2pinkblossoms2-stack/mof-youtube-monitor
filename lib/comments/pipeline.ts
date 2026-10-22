@@ -1,6 +1,9 @@
 // 새 댓글 수집과 분류 (서버 전용). 수집 5분 뒤 실행에서 부른다.
 import { listActiveVideos } from "../db/videos";
 import { existingCommentIds, insertComments, listUnclassified, saveClassification } from "../db/comments";
+import { getVideoTexts, listDraftTargets, saveDraft } from "../db/drafts";
+import { generateDraft } from "./draft";
+import { fetchReferenceTexts } from "./references";
 import { isWithinVideoWindow } from "../time";
 import { fetchCommentPage } from "../youtube/comments";
 import { classifyBatch } from "./classify";
@@ -30,6 +33,41 @@ export async function collectNewComments(now: Date, deadline: number): Promise<n
     }
   }
   return collected;
+}
+
+// 초안 대상 댓글에 답글 초안을 만든다. 만들지 못한 댓글은 초안 없이 남겨 다음 실행에서 다시 시도한다.
+export async function draftPending(deadline: number, limit = 50): Promise<{ drafted: number; needsCheck: number; pending: number }> {
+  const targets = await listDraftTargets(limit);
+  if (targets.length === 0) return { drafted: 0, needsCheck: 0, pending: 0 };
+  const [videos, references] = await Promise.all([
+    getVideoTexts([...new Set(targets.map((t) => t.videoId))]),
+    fetchReferenceTexts(),
+  ]);
+
+  let drafted = 0;
+  let needsCheck = 0;
+  for (let i = 0; i < targets.length && Date.now() < deadline; i += PARALLEL_BATCHES) {
+    const group = targets.slice(i, i + PARALLEL_BATCHES);
+    const results = await Promise.allSettled(
+      group.map(async (t) => {
+        const video = videos.get(t.videoId);
+        const draft = await generateDraft({
+          comment: t.body,
+          videoTitle: video?.title ?? "",
+          videoDescription: video?.description ?? "",
+          references,
+        });
+        await saveDraft(t.commentId, draft.text, draft.needsCheck);
+        return draft;
+      }),
+    );
+    for (const r of results) {
+      if (r.status !== "fulfilled") continue;
+      drafted++;
+      if (r.value.needsCheck) needsCheck++;
+    }
+  }
+  return { drafted, needsCheck, pending: targets.length - drafted };
 }
 
 // 분류하지 않은 댓글을 분류한다. 개인정보는 AI에 보내지 않고 바로 "개인정보 포함"으로 표시한다.

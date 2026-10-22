@@ -23,6 +23,10 @@ export const COLLECT_WINDOWS = [
 // 실패한 수집을 다시 시도하기까지의 분 (자동 실행은 수집 +5분에 돈다)
 export const RETRY_DELAY_MINUTES = 5;
 
+// 답글 초안의 근거로 쓸 공식 자료 링크. 비어 있으면 영상 설명만 근거로 쓴다.
+// 자료를 추가하려면 주소를 여기에 적는다 (페이지의 글자를 읽어 AI에 함께 넘긴다).
+export const REFERENCE_LINKS: readonly string[] = [];
+
 // 쇼츠 후보 기준: 영상 길이가 이 초를 넘으면 롱폼, 이하이면 쇼츠 전용 주소로 한 번 더 확인한다
 // (길이만으로는 구분되지 않음: lib/youtube/shorts.ts)
 export const SHORTS_MAX_SECONDS = 180;
