@@ -1,6 +1,10 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import ReportView from "./report-view";
 import SiteHeader from "./site-header";
+
+// 같은 위치의 layout 제목 틀(template)은 이 페이지에 적용되지 않아 전체 제목을 직접 적는다
+export const metadata: Metadata = { title: "숫자 | 재정경제부 유튜브 모니터링" };
 
 // 숫자 화면: 보고 시각별 영상 조회수·댓글 수와 직전 대비 증가량
 export default function Home({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {

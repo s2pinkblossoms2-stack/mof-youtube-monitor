@@ -1,5 +1,8 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import LoginForm from "./login-form";
+
+export const metadata: Metadata = { title: "로그인" };
 
 type Params = Promise<Record<string, string | string[] | undefined>>;
 
