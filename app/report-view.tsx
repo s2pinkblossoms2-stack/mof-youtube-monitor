@@ -3,9 +3,10 @@ import Link from "next/link";
 import { REPORT_SLOTS, LABEL_COLLECT_FAILED, LABEL_DELTA_NEW, LABEL_DELTA_UNAVAILABLE } from "@/lib/constants";
 import type { Delta } from "@/lib/delta";
 import { getLatestReportSlot, getReportData, listReportDates } from "@/lib/db/report";
-import { buildReport, type ReportRow } from "@/lib/report";
-import { formatKstTime } from "@/lib/time";
+import { buildReport, shownSubscribers, type ReportRow } from "@/lib/report";
+import { formatKstDateTime, formatKstTime } from "@/lib/time";
 import type { ReportSlot } from "@/lib/types";
+import SubscriberEdit from "./subscriber-edit";
 
 type Params = Record<string, string | string[] | undefined>;
 
@@ -82,6 +83,7 @@ export default async function ReportView({ searchParams }: { searchParams: Promi
 
   const data = await getReportData(date, slot);
   const report = buildReport(data);
+  const subscribers = shownSubscribers(data.channel);
 
   return (
     <div className="space-y-6">
@@ -135,14 +137,33 @@ export default async function ReportView({ searchParams }: { searchParams: Promi
         <section className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
           <h2 className="text-sm text-zinc-600 dark:text-zinc-400">구독자 수</h2>
           <p className="mt-1 text-2xl font-semibold">
-            {data.channel === null ? (
+            {subscribers.kind === "none" ? (
               <span className="text-base font-normal text-zinc-500">아직 수집되지 않았습니다</span>
-            ) : data.channel.status === "failed" || data.channel.subscriberCount === null ? (
+            ) : subscribers.kind === "failed" ? (
               <Failed />
             ) : (
-              `${number.format(data.channel.subscriberCount)}명`
+              `${number.format(subscribers.value)}명`
             )}
           </p>
+          {subscribers.kind === "manual" && (
+            <p className="mt-1 text-sm text-amber-800 dark:text-amber-300">
+              관리자가 고친 값{subscribers.by ? ` (${subscribers.by}` : ""}
+              {subscribers.at ? `${subscribers.by ? ", " : " ("}${formatKstDateTime(subscribers.at)}` : ""}
+              {subscribers.by || subscribers.at ? ")" : ""}
+              {subscribers.autoValue !== null
+                ? ` · 자동 수집값 ${number.format(subscribers.autoValue)}명`
+                : " · 자동 수집값 없음(수집 실패)"}
+            </p>
+          )}
+          {subscribers.kind === "auto" && (
+            <p className="mt-1 text-xs text-zinc-500">집계 보고서 기준이라 스튜디오와 몇 명 다를 수 있습니다.</p>
+          )}
+          <SubscriberEdit
+            date={date}
+            slot={slot}
+            hasManual={subscribers.kind === "manual"}
+            initialCount={subscribers.kind === "auto" || subscribers.kind === "manual" ? String(subscribers.value) : ""}
+          />
         </section>
         <section className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
           <h2 className="text-sm text-zinc-600 dark:text-zinc-400">수집 상태</h2>

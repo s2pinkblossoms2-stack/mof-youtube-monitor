@@ -3,7 +3,7 @@ import ExcelJS from "exceljs";
 import { LABEL_COLLECT_FAILED, LABEL_DELTA_NEW, LABEL_DELTA_UNAVAILABLE, REPORT_SLOTS } from "./constants";
 import type { Delta } from "./delta";
 import { getReportData } from "./db/report";
-import { buildReport } from "./report";
+import { buildReport, shownSubscribers } from "./report";
 import type { ReportSlot } from "./types";
 
 const COLUMNS = [
@@ -45,15 +45,18 @@ export async function buildReportWorkbook(date: string): Promise<Buffer | null> 
     sheet.getCell("A1").font = { bold: true, size: 13 };
 
     sheet.getCell("A2").value = "구독자 수";
-    const channel = data.channel;
+    const subs = shownSubscribers(data.channel);
     sheet.getCell("B2").value =
-      channel === null
-        ? "수집 전"
-        : channel.status === "failed" || channel.subscriberCount === null
-          ? LABEL_COLLECT_FAILED
-          : channel.subscriberCount;
+      subs.kind === "none" ? "수집 전" : subs.kind === "failed" ? LABEL_COLLECT_FAILED : subs.value;
     sheet.getCell("B2").numFmt = "#,##0";
     sheet.getCell("B2").alignment = { horizontal: "left" };
+    // 관리자가 고친 값이면 누가 고쳤는지와 원래 자동 수집값을 함께 적는다
+    sheet.getCell("C2").value =
+      subs.kind === "manual"
+        ? `관리자가 고친 값 (${subs.by || "이름 없음"}) · 자동 수집값 ${subs.autoValue === null ? "없음(수집 실패)" : subs.autoValue.toLocaleString("ko-KR")}`
+        : subs.kind === "auto"
+          ? "집계 보고서 기준 (스튜디오와 몇 명 다를 수 있음)"
+          : "";
 
     const header = sheet.getRow(4);
     COLUMNS.forEach((c, i) => {

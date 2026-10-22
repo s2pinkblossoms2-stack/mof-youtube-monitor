@@ -1,9 +1,11 @@
 // 영상 목록 갱신과 조회수·댓글 수 수집 (서버 전용).
 // 규칙(PRD 5장 must 1): 14일 이내 영상만, 유튜브 값 그대로 저장, 실패는 채우지 않고 "수집 실패"로 기록.
+import { getChannelSnapshot, saveFailedChannelSnapshot, saveOkChannelSnapshot } from "./db/channel";
 import { listActiveVideos, getKnownKinds, deactivateVideos, upsertVideos } from "./db/videos";
 import { listSlotSnapshots, saveFailedSnapshots, saveOkSnapshots } from "./db/snapshots";
 import { isWithinVideoWindow, reportSlotFor } from "./time";
 import type { ReportSlot, Video, VideoSnapshot } from "./types";
+import { fetchExactSubscriberCount } from "./youtube/subscribers";
 import { collectRecentVideos, fetchVideoDetails, type VideoWithStats } from "./youtube/videos";
 
 export type SyncResult = {
@@ -12,10 +14,13 @@ export type SyncResult = {
   removed: string[]; // 14일이 지나 대상에서 뺀 영상 ID
 };
 
-export type CollectResult =
+type VideoCollectResult =
   | { status: "skipped"; reason: string } // 수집 시각 창 밖이라 저장하지 않음
   | { status: "done"; date: string; slot: ReportSlot; ok: number; failed: number; added: number; removed: number }
   | { status: "failed"; date: string; slot: ReportSlot; failed: number; message: string };
+
+// 영상 수집 결과에 구독자 수 수집 결과(channel)를 함께 담는다
+export type CollectResult = VideoCollectResult & { channel?: "ok" | "failed" };
 
 // 14일 이내인 영상으로 목록을 맞춘다: 새 영상은 추가하고, 14일이 지난 영상은 뺀다.
 // 월요일 갱신과 매 수집에서 같이 쓴다 (같은 영상은 한 번만 저장됨).
@@ -59,8 +64,42 @@ async function activeInWindow(now: Date): Promise<Video[]> {
   return (await listActiveVideos()).filter((v) => isWithinVideoWindow(new Date(v.uploadedAt), now));
 }
 
-// 하루 3회 수집. 수집 시각 창(09:30~09:59 등) 밖이면 저장하지 않는다.
+// 구독자 수 수집: 정확값을 받아 저장하고, 받지 못하면 값을 채우지 않고 "수집 실패"로 남긴다.
+async function collectChannel(now: Date, date: string, slot: ReportSlot): Promise<"ok" | "failed"> {
+  try {
+    const count = await fetchExactSubscriberCount(now);
+    await saveOkChannelSnapshot(date, slot, count, now);
+    return "ok";
+  } catch (error) {
+    console.error("구독자 수 수집 실패:", error instanceof Error ? error.message : error);
+    try {
+      await saveFailedChannelSnapshot(date, slot, now);
+    } catch {
+      // 실패 기록도 남기지 못하면 응답의 failed 표시로 알린다
+    }
+    return "failed";
+  }
+}
+
+// 하루 3회 수집(영상 + 구독자 수). 수집 시각 창(09:30~09:59 등) 밖이면 저장하지 않는다.
 export async function runCollect(now: Date): Promise<CollectResult> {
+  const result = await collectVideos(now);
+  const where = reportSlotFor(now);
+  if (result.status === "skipped" || !where) return result;
+  return { ...result, channel: await collectChannel(now, where.date, where.slot) };
+}
+
+// 5분 뒤 재시도: 실패한 영상과, 아직 성공하지 못한 구독자 수만 다시 받는다.
+export async function runRetry(now: Date): Promise<CollectResult> {
+  const result = await retryVideos(now);
+  const where = reportSlotFor(now);
+  if (result.status === "skipped" || !where) return result;
+  const current = await getChannelSnapshot(where.date, where.slot);
+  if (current?.status === "ok") return { ...result, channel: "ok" };
+  return { ...result, channel: await collectChannel(now, where.date, where.slot) };
+}
+
+async function collectVideos(now: Date): Promise<VideoCollectResult> {
   const where = reportSlotFor(now);
   if (!where) return { status: "skipped", reason: "수집 시각 창 밖이라 저장하지 않았습니다." };
   const { date, slot } = where;
@@ -101,8 +140,7 @@ export async function runCollect(now: Date): Promise<CollectResult> {
   };
 }
 
-// 실패한 영상만 다시 받는다 (수집 5분 뒤 자동 실행)
-export async function runRetry(now: Date): Promise<CollectResult> {
+async function retryVideos(now: Date): Promise<VideoCollectResult> {
   const where = reportSlotFor(now);
   if (!where) return { status: "skipped", reason: "수집 시각 창 밖이라 다시 시도하지 않았습니다." };
   const { date, slot } = where;

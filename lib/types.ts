@@ -37,7 +37,10 @@ export type ChannelSnapshot = {
   reportDate: string;
   reportSlot: ReportSlot;
   status: SnapshotStatus;
-  subscriberCount: number | null;
+  subscriberCount: number | null; // 자동 수집한 원래 값 (실패면 null)
+  manualCount: number | null; // 관리자가 고친 값 (있으면 화면·엑셀에 이 값을 보여준다)
+  manualBy: string | null;
+  manualAt: string | null;
 };
 
 // 댓글의 처리 결과: 초안을 만들거나(draft), 제외 사유를 붙인다

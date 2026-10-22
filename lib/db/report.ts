@@ -1,6 +1,7 @@
 // 숫자 화면에 필요한 저장 값 읽기 (서버 전용).
 import { previousReportSlot } from "../time";
-import type { ChannelSnapshot, ReportSlot, SnapshotStatus, Video, VideoKind, VideoSnapshot } from "../types";
+import type { ChannelSnapshot, ReportSlot, Video, VideoKind, VideoSnapshot } from "../types";
+import { getChannelSnapshot } from "./channel";
 import { dbError, getDb } from "./client";
 import { listSlotSnapshots } from "./snapshots";
 
@@ -62,22 +63,7 @@ export async function getReportData(date: string, slot: ReportSlot): Promise<Rep
     }
   }
 
-  const ch = await getDb()
-    .from("channel_snapshots")
-    .select("*")
-    .eq("report_date", date)
-    .eq("report_slot", slot)
-    .maybeSingle();
-  if (ch.error) throw dbError("구독자 기록 읽기", ch.error);
-  const channel: ChannelSnapshot | null = ch.data
-    ? {
-        collectedAt: ch.data.collected_at as string,
-        reportDate: ch.data.report_date as string,
-        reportSlot: ch.data.report_slot as ReportSlot,
-        status: ch.data.status as SnapshotStatus,
-        subscriberCount: ch.data.subscriber_count === null ? null : Number(ch.data.subscriber_count),
-      }
-    : null;
+  const channel = await getChannelSnapshot(date, slot);
 
   return { date, slot, snapshots, previous, previousCollected: previous.length > 0, videos, channel };
 }

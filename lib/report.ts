@@ -1,7 +1,7 @@
 // 숫자 화면에 보여줄 줄 만들기: 영상별 값과 직전 보고 시각 대비 증가량.
 import { calcDelta, type Delta, type Metric } from "./delta";
 import type { ReportData } from "./db/report";
-import type { Video, VideoSnapshot } from "./types";
+import type { ChannelSnapshot, Video, VideoSnapshot } from "./types";
 
 export type ReportRow = {
   video: Video;
@@ -18,6 +18,28 @@ export type ReportSummary = {
   failedCount: number;
   collectedAt: string | null; // 이 보고 시각의 가장 늦은 수집 시각
 };
+
+// 구독자 수 칸에 보여줄 값: 관리자가 고친 값이 있으면 그 값, 없으면 자동 수집한 값
+export type ShownSubscribers =
+  | { kind: "none" } // 이 보고 시각에 수집 기록이 없음
+  | { kind: "failed" } // 수집 실패 (고친 값도 없음)
+  | { kind: "auto"; value: number }
+  | { kind: "manual"; value: number; by: string; at: string | null; autoValue: number | null };
+
+export function shownSubscribers(channel: ChannelSnapshot | null): ShownSubscribers {
+  if (channel === null) return { kind: "none" };
+  if (channel.manualCount !== null) {
+    return {
+      kind: "manual",
+      value: channel.manualCount,
+      by: channel.manualBy ?? "",
+      at: channel.manualAt,
+      autoValue: channel.status === "ok" ? channel.subscriberCount : null,
+    };
+  }
+  if (channel.status === "failed" || channel.subscriberCount === null) return { kind: "failed" };
+  return { kind: "auto", value: channel.subscriberCount };
+}
 
 function metric(snapshot: VideoSnapshot | undefined, pick: (s: VideoSnapshot) => number | null): Metric {
   if (!snapshot) return undefined;

@@ -21,8 +21,10 @@ export function checkCronAuth(request: Request): Response | null {
 }
 
 // 실행 결과를 응답으로 바꾼다. 실패(failed)나 오류는 500으로 알려 Vercel 기록에 남게 한다.
-export function resultResponse(result: { status: string }): Response {
-  return Response.json({ ok: result.status !== "failed", ...result }, { status: result.status === "failed" ? 500 : 200 });
+// 구독자 수 수집(channel)이 실패한 경우도 오류로 알려 Vercel 기록에서 바로 보이게 한다.
+export function resultResponse(result: { status: string; channel?: string }): Response {
+  const ok = result.status !== "failed" && result.channel !== "failed";
+  return Response.json({ ok, ...result }, { status: ok ? 200 : 500 });
 }
 
 export function errorResponse(error: unknown): Response {

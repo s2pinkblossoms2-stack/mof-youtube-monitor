@@ -49,6 +49,11 @@ create table if not exists public.channel_snapshots (
   ),
   constraint channel_snapshots_unique_slot unique (report_date, report_slot)
 );
+-- 관리자가 고친 값 (자동 수집한 원래 값은 그대로 두고 따로 저장한다)
+alter table public.channel_snapshots
+  add column if not exists manual_count bigint check (manual_count is null or manual_count >= 0),
+  add column if not exists manual_by text,       -- 고친 사람이 입력한 이름
+  add column if not exists manual_at timestamptz; -- 고친 시각
 
 -- 4) 댓글 (수집한 시각부터 14일 뒤 삭제)
 create table if not exists public.comments (
