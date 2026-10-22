@@ -32,6 +32,8 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# 값이 없는 이름 목록 파일은 커밋한다
+!.env.example
 
 # vercel
 .vercel
