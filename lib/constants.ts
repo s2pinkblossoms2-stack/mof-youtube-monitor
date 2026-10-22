@@ -23,7 +23,8 @@ export const COLLECT_WINDOWS = [
 // 실패한 수집을 다시 시도하기까지의 분 (자동 실행은 수집 +5분에 돈다)
 export const RETRY_DELAY_MINUTES = 5;
 
-// 쇼츠 1차 판별 기준: 영상 길이가 이 초 이하이면 쇼츠로 본다 (실제 채널 영상으로 확인 필요)
+// 쇼츠 후보 기준: 영상 길이가 이 초를 넘으면 롱폼, 이하이면 쇼츠 전용 주소로 한 번 더 확인한다
+// (길이만으로는 구분되지 않음: lib/youtube/shorts.ts)
 export const SHORTS_MAX_SECONDS = 180;
 
 // 댓글 분류: 초안을 만드는 댓글은 "draft", 나머지는 제외 사유를 하나 붙인다.
