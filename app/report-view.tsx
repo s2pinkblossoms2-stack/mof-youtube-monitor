@@ -107,6 +107,12 @@ export default async function ReportView({ searchParams }: { searchParams: Promi
             보기
           </button>
         </form>
+        <a
+          href={`/api/export?date=${date}`}
+          className="rounded border border-zinc-300 px-3 py-1 hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
+        >
+          엑셀로 내려받기
+        </a>
         <nav aria-label="보고 시각" className="flex gap-2">
           {REPORT_SLOTS.map((s) => (
             <Link
