@@ -31,6 +31,18 @@ export async function getVideoTexts(
   return map;
 }
 
+// 담당자가 [복사]할 때 고친 글과 사용 시각을 저장한다 ("초안 활용 90%" 측정용).
+// 초안이 있는 댓글만 대상이고, 저장된 줄 수를 돌려준다 (0이면 초안이 없는 댓글).
+export async function markCopied(commentId: string, finalText: string): Promise<number> {
+  const { data, error } = await getDb()
+    .from("reply_drafts")
+    .update({ final_text: finalText, used_at: new Date().toISOString() })
+    .eq("comment_id", commentId)
+    .select("comment_id");
+  if (error) throw dbError("복사 기록 저장", error);
+  return data?.length ?? 0;
+}
+
 // 초안 저장 (이미 있으면 건드리지 않는다: 담당자가 고친 글을 덮어쓰지 않기 위해)
 export async function saveDraft(commentId: string, text: string, needsCheck: boolean): Promise<void> {
   const { error } = await getDb()
