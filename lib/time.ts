@@ -48,6 +48,12 @@ export function toKstDate(date: Date): string {
   return toKst(date).day;
 }
 
+// 화면에 보여줄 한국 시간 시각 (HH:MM)
+export function formatKstTime(iso: string): string {
+  const { minutes } = toKst(new Date(iso));
+  return `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
+}
+
 // 수집한 시각이 어느 보고 시각에 속하는지. 수집 시각 창 밖이면 null.
 // 예: 09:30~09:59 → "10:00" (09:35 재시도도 같은 보고 시각)
 export function reportSlotFor(collectedAt: Date): { date: string; slot: ReportSlot } | null {
