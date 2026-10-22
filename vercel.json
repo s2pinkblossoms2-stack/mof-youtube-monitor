@@ -1,0 +1,8 @@
+{
+  "crons": [
+    { "path": "/api/cron/collect", "schedule": "30 0,4,7 * * *" },
+    { "path": "/api/cron/retry-and-draft", "schedule": "35 0,4,7 * * *" },
+    { "path": "/api/cron/refresh-videos", "schedule": "50 23 * * 0" },
+    { "path": "/api/cron/cleanup", "schedule": "0 18 * * *" }
+  ]
+}
