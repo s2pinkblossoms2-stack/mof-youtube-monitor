@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import MofeLogo from "../mofe-logo";
 import LoginForm from "./login-form";
 
 export const metadata: Metadata = { title: "로그인" };
@@ -17,9 +18,10 @@ async function LoginFormWithNext({ searchParams }: { searchParams: Params }) {
 export default function LoginPage({ searchParams }: { searchParams: Params }) {
   return (
     <main className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center px-4 py-8">
-      <h1 className="mb-1 text-2xl font-bold tracking-tight">재정경제부 유튜브 모니터링 서비스</h1>
-      <p className="mb-6 text-sm text-zinc-600 dark:text-zinc-400">담당자 공유 비밀번호를 입력해 주세요.</p>
-      <Suspense fallback={<p className="text-zinc-500">불러오는 중…</p>}>
+      <div className="mb-6 flex items-center gap-3 text-[17px] font-bold text-brand"><MofeLogo height={40} /><span aria-hidden="true" className="h-[22px] w-px bg-brand-line" />유튜브 모니터링</div>
+      <h1 className="mb-1 text-2xl font-bold tracking-[-0.02em]">재정경제부 유튜브 모니터링 서비스</h1>
+      <p className="mb-6 text-sm text-muted">담당자 공유 비밀번호를 입력해 주세요.</p>
+      <Suspense fallback={<p className="text-muted">불러오는 중…</p>}>
         <LoginFormWithNext searchParams={searchParams} />
       </Suspense>
     </main>
