@@ -1,36 +1,74 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 재정경제부 유튜브 모니터링
 
-## Getting Started
+재정경제부 공식 유튜브 채널의 **영상별 조회수·댓글 수·구독자 수를 하루 3회 기록**하고, 새 댓글 중 **질문 댓글에는 답글 초안을 제안**하는 홍보 담당자용 서비스입니다.
 
-First, run the development server:
+> 재정경제부 홍보 담당자의 업무 도구이며, 재정경제부 공식 누리집이 아닙니다.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- 서비스 주소: https://mof-youtube-monitor.vercel.app
+- 숫자·댓글 화면은 공유 비밀번호로 로그인해야 볼 수 있습니다. 메인 소개 화면만 누구나 열 수 있습니다.
+
+## 왜 만들었나
+
+홍보 담당자는 매일 10시·14시·17시에 최근 2주간의 영상(롱폼·쇼츠)을 하나씩 열어 조회수와 댓글 수를 옮겨 적어 왔습니다. 보고 1회에 약 30분이 걸리고, 누락·오기입이 생길 수 있었습니다. 댓글 응대도 일일이 읽고 답글을 고민해야 해서 늦어지기 쉬웠습니다. 이 서비스는 숫자 수집을 자동화하고, 질문 댓글의 답글 초안을 만들어 담당자가 확인만 하게 합니다.
+
+## 주요 기능
+
+| 기능 | 내용 |
+|---|---|
+| 영상 목록 관리 | 업로드일 기준 최근 14일 영상(롱폼·쇼츠)만 집계, 매주 월요일 목록 갱신 |
+| 하루 3회 수집·기록 | 09:30 / 13:30 / 16:30에 수집해 10:00 / 14:00 / 17:00 기록으로 저장 |
+| 증가량 표시 | 직전 보고 시각 대비 증가량 (늘면 빨강 ▲, 줄면 파랑 ▼, 없으면 "비교 불가"·"신규") |
+| 구독자 수 | 채널 관리자 권한으로 정확한 값을 계산하고, 틀리면 관리자가 이름과 함께 고치거나 되돌림 |
+| 댓글 분류 | 개인정보 → 욕설·비방 → 질문 → 기타 순으로 판단해, 새 댓글 모두에 "초안 작성" 또는 "제외 사유"를 붙임 |
+| 답글 초안 | 질문 댓글에만 존댓말 초안 생성. 영상 설명에 근거가 없으면 "담당자 확인 필요"로 표시 |
+| 엑셀 내려받기 | 화면과 같은 값을 보고 시각별 시트로 저장 |
+| 접근 제한 | 공유 비밀번호 로그인, 비밀번호 대입 시도 제한 (15분 10번) |
+
+## 지키는 규칙
+
+- 초안만 만들고 **유튜브에 자동으로 올리지 않습니다.**
+- 수집에 실패하면 추측하거나 이전 값으로 채우지 않고 **"수집 실패"로 표시**합니다.
+- 조회수·댓글 수·구독자 수는 유튜브가 준 값 그대로 저장합니다 (반올림·보정 없음).
+- 개인정보(전화번호·이메일·주민등록번호)가 든 댓글은 AI에 보내지 않습니다.
+- 댓글은 작성자 닉네임·본문·작성 시각까지만 저장하고 14일 뒤 삭제합니다.
+
+자세한 요구사항은 [PRD.md](PRD.md), 구현 순서는 [PLAN.md](PLAN.md), 설계는 [DESIGN.md](DESIGN.md)에 있습니다.
+
+## 기술 스택
+
+- Next.js 16 (App Router) / React 19 / TypeScript / Tailwind CSS v4
+- 저장소: Supabase (PostgreSQL)
+- 자동 실행: Supabase `pg_cron`이 정해진 시각에 Vercel의 `/api/cron/*` 주소를 호출 (Vercel 무료 요금제는 자동 실행이 하루 1회로 제한되기 때문)
+- 데이터: YouTube Data API, YouTube Analytics API (구독자 정확값)
+- 답글 초안: OpenAI API
+- 배포: Vercel
+
+## 폴더 구조
+
+```
+app/        화면과 주소 (메인 소개, report 숫자, comments 댓글, login 로그인, api/cron·export)
+lib/        서버 전용 규칙과 외부 연결 (youtube/, comments/, db/, collect.ts 등)
+supabase/   저장소 표 정의(schema.sql)와 자동 실행 일정(cron.sql)
+scripts/    구글 인증 발급, Supabase 일정 적용 도구
+proxy.ts    로그인 접근 제한
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 직접 실행하기
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm install
+cp .env.example .env   # 값은 직접 채웁니다
+npm run dev            # http://localhost:3000
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+`.env`에 필요한 이름은 [.env.example](.env.example)에 있습니다 (YouTube·Google·Supabase·OpenAI 키, 자동 실행 비밀 값, 접속 비밀번호). 값은 저장소에 올리지 않습니다.
 
-## Learn More
+```bash
+npm run lint
+npx tsc --noEmit
+npm run build
+```
 
-To learn more about Next.js, take a look at the following resources:
+## 현재 상태
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+수집·증가량·구독자 수정·댓글 분류·답글 초안·엑셀·로그인까지 구현했고 배포했습니다. 댓글 삭제(nice)는 실제 관리자 계정으로 삭제 가능 여부를 확인한 뒤 만들 예정입니다.
