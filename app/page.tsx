@@ -11,7 +11,14 @@ import LatestCarousel from "./latest-carousel";
 const sans = Noto_Sans_KR({ subsets: ["latin"], weight: ["400", "500", "700", "800"], display: "swap" });
 const hand = Nanum_Pen_Script({ subsets: ["latin"], weight: "400", display: "swap" });
 
-export const metadata: Metadata = { title: { absolute: "재정경제부 유튜브 모니터링" } };
+// 메인(/)만 검색에 나오게 연다. 나머지 화면은 layout.tsx의 noindex를 그대로 따른다.
+export const metadata: Metadata = {
+  title: { absolute: "재정경제부 유튜브 모니터링 | 영상 조회수·댓글 수 하루 3회 기록과 질문 댓글 답글 초안" },
+  description:
+    "재정경제부 공식 유튜브 영상의 조회수·댓글 수를 하루 3회(10시·14시·17시) 기록하고, 시청자 질문 댓글에는 존댓말 답글 초안을 제안합니다. 홍보 담당자용 서비스입니다. 지금 로그인해서 영상별 증가량과 엑셀 보고 자료를 바로 확인해 보세요. 자동 게시는 하지 않습니다.",
+  alternates: { canonical: "/" },
+  robots: { index: true, follow: true },
+};
 
 const CHANNEL_URL = "https://www.youtube.com/channel/UCnrPF6de3KuHZy3c2ZkqcMA";
 const BLUE = "#083891"; // 재정경제부 누리집의 진한 파랑(primary-70)
@@ -66,7 +73,7 @@ export default function Home() {
 
           {/* 큰 제목 */}
           <h1 className="absolute left-0 top-[176px] w-[1440px] text-center text-[88px] font-bold leading-[92px]">
-            <span className="hero-line1 block" style={{ letterSpacing: "-0.035em" }}>재정경제부 소식을</span>
+            <span className="hero-line1 block" style={{ letterSpacing: "-0.035em" }}>재정경제부 유튜브를</span>
             <span className="hero-line2 block" style={{ letterSpacing: "-0.022em" }}>한눈에, 숫자로</span>
           </h1>
 
@@ -139,11 +146,12 @@ export default function Home() {
         <div className="mt-8 rounded-full bg-[#D8E5FD] px-4 py-2 text-[14px] font-medium" style={{ color: BLUE }}>
           재정경제부 공식 유튜브 최신 영상
         </div>
-        <h1 className="mt-5 text-center font-bold leading-[1.1]" style={{ fontSize: "clamp(38px, 11vw, 56px)", letterSpacing: "-0.03em" }}>
-          재정경제부 소식을
+        {/* 제목(h1)은 컴퓨터 화면 쪽에 하나만 두고, 휴대폰 쪽은 같은 모양의 문단으로 둔다 (페이지당 h1 하나) */}
+        <p className="mt-5 text-center font-bold leading-[1.1]" style={{ fontSize: "clamp(34px, 10vw, 56px)", letterSpacing: "-0.03em" }}>
+          재정경제부 유튜브를
           <br />
           한눈에, 숫자로
-        </h1>
+        </p>
         <p className="mt-4 text-center text-[16px] leading-[26px] text-[#464C53]">
           조회수와 댓글 수를 하루 세 번 기록하고,
           <br />
@@ -169,6 +177,30 @@ export default function Home() {
         </Link>
         <p className="mt-6 text-center text-[12px] text-[#464C53]">재정경제부 공식 유튜브의 공개 영상을 불러옵니다. 재정경제부 홍보 담당자용 업무 도구이며, 재정경제부 공식 누리집이 아닙니다.</p>
       </div>
+
+      {/* ───────── 서비스 소개 (두 화면 공통, 스크롤하면 보임) ───────── */}
+      <section aria-label="서비스 소개" className="mx-auto max-w-[960px] px-5 pb-16 pt-8 min-[821px]:pt-16">
+        <div className="grid gap-8 min-[821px]:grid-cols-3">
+          <div>
+            <h2 className="text-[20px] font-bold" style={{ color: BLUE }}>하루 3회, 숫자를 기록합니다</h2>
+            <p className="mt-2 text-[15px] leading-[26px] text-[#464C53]">
+              재정경제부 공식 유튜브의 최근 14일 영상에 대해 조회수와 댓글 수를 10시·14시·17시에 기록하고, 직전 시간대보다 얼마나 늘었는지 보여 드립니다.
+            </p>
+          </div>
+          <div>
+            <h2 className="text-[20px] font-bold" style={{ color: BLUE }}>질문 댓글에는 답글 초안을</h2>
+            <p className="mt-2 text-[15px] leading-[26px] text-[#464C53]">
+              새 댓글 가운데 질문이 있는 댓글에 존댓말 답글 초안을 제안합니다. 초안만 만들며 유튜브에 자동으로 게시하지 않습니다.
+            </p>
+          </div>
+          <div>
+            <h2 className="text-[20px] font-bold" style={{ color: BLUE }}>엑셀로 바로 보고</h2>
+            <p className="mt-2 text-[15px] leading-[26px] text-[#464C53]">
+              기록한 유튜브 조회수·댓글 수·구독자 수를 엑셀 파일로 내려받아 보고 자료에 그대로 쓸 수 있습니다. 로그인이 필요합니다.
+            </p>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
