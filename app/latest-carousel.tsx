@@ -220,7 +220,7 @@ export default function LatestCarousel({ videos, mode }: Props) {
               aria-label={`${v.title} (유튜브에서 새 창으로 열기)`}
               title={v.title}
               draggable={false}
-              className="absolute block overflow-hidden bg-[#DAE7C7]"
+              className="absolute block overflow-hidden bg-[#D8E5FD]"
               style={{ display: "none" }}
             >
               {/* 유튜브가 공개한 썸네일 이미지를 그대로 쓴다 (크기가 매 프레임 바뀌어 이미지 최적화는 쓰지 않음) */}
@@ -246,7 +246,7 @@ export default function LatestCarousel({ videos, mode }: Props) {
                 cardRefs.current[i] = el as unknown as HTMLAnchorElement | null;
               }}
               aria-hidden="true"
-              className="absolute bg-gradient-to-b from-[#DAE7C7] to-[#BFD3A5]"
+              className="absolute bg-gradient-to-b from-[#D8E5FD] to-[#B1CEFB]"
               style={{ display: "none" }}
             />
           ),

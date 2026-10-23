@@ -21,5 +21,6 @@ export function proxy(request: NextRequest) {
 
 export const config = {
   // api/cron/ 아래만 제외한다 (끝에 /를 붙여, 나중에 만드는 api/cron-xxx 같은 주소가 로그인 없이 열리지 않게 함)
-  matcher: ["/((?!api/cron/|_next/static|_next/image|favicon.ico).*)"],
+  // 로그인 없이 보여야 하는 정적 이미지(메인 화면의 로고 등, public 폴더의 svg·png·jpg·ico)도 제외한다.
+  matcher: ["/((?!api/cron/|_next/static|_next/image|favicon.ico|[^/]+\\.(?:svg|png|jpe?g|webp|ico)$).*)"],
 };
