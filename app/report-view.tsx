@@ -104,7 +104,7 @@ export default async function ReportView({ searchParams }: { searchParams: Promi
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-end gap-4">
-        <form action="/" className="flex items-center gap-2">
+        <form action="/report" className="flex items-center gap-2">
           <label htmlFor="date" className="text-sm text-zinc-600 dark:text-zinc-400">
             날짜
           </label>
@@ -135,7 +135,7 @@ export default async function ReportView({ searchParams }: { searchParams: Promi
           {REPORT_SLOTS.map((s) => (
             <Link
               key={s}
-              href={`/?date=${date}&slot=${s}`}
+              href={`/report?date=${date}&slot=${s}`}
               aria-current={s === slot ? "page" : undefined}
               className={
                 s === slot

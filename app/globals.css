@@ -17,6 +17,29 @@
   }
 }
 
+/* ── 메인 화면(히어로) 등장 움직임: 한 번만 재생. 움직임 줄이기 설정이면 모두 끈다 ── */
+@keyframes hero-drop { from { opacity: 0; transform: translateY(-18px); } to { opacity: 1; transform: none; } }
+@keyframes hero-pop { from { opacity: 0; transform: scale(0.85); } to { opacity: 1; transform: none; } }
+@keyframes hero-rise { from { opacity: 0; transform: translateY(34px); filter: blur(12px); } to { opacity: 1; transform: none; filter: blur(0); } }
+@keyframes hero-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes hero-scale { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: none; } }
+@keyframes hero-draw { to { stroke-dashoffset: 0; } }
+
+.hero-nav { animation: hero-drop 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.hero-badge { animation: hero-pop 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) 0.15s both; }
+.hero-line1 { animation: hero-rise 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) 0.3s both; }
+.hero-line2 { animation: hero-rise 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) 0.42s both; }
+.hero-sub { animation: hero-rise 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) 0.58s both; }
+.hero-cards { animation: hero-rise 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) 0.7s both; }
+.hero-button { animation: hero-scale 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) 1s both; }
+.hero-note { animation: hero-fade 0.6s ease 1.2s both; }
+.hero-draw { stroke-dasharray: 400; stroke-dashoffset: 400; animation: hero-draw 1.1s ease-out 1.3s forwards; }
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-nav, .hero-badge, .hero-line1, .hero-line2, .hero-sub, .hero-cards, .hero-button, .hero-note { animation: none; }
+  .hero-draw { animation: none; stroke-dashoffset: 0; }
+}
+
 body {
   background: var(--background);
   color: var(--foreground);

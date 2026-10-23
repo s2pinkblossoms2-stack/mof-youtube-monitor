@@ -10,7 +10,7 @@ type Params = Promise<Record<string, string | string[] | undefined>>;
 async function LoginFormWithNext({ searchParams }: { searchParams: Params }) {
   const params = await searchParams;
   const next = Array.isArray(params.next) ? params.next[0] : params.next;
-  return <LoginForm next={next ?? "/"} />;
+  return <LoginForm next={next ?? "/report"} />;
 }
 
 // 로그인 화면: 공유 비밀번호를 입력해야 숫자·댓글 화면을 볼 수 있다

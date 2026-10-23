@@ -40,7 +40,7 @@ export async function saveSubscriberCount(_prev: EditState, formData: FormData):
     console.error("구독자 수 수정 오류:", error instanceof Error ? error.message : error);
     return { ok: false, message: "저장하지 못했습니다. 잠시 뒤 다시 시도해 주세요." };
   }
-  revalidatePath("/");
+  revalidatePath("/report");
   return { ok: true, message: "고친 값을 저장했습니다." };
 }
 
@@ -55,6 +55,6 @@ export async function resetSubscriberCount(_prev: EditState, formData: FormData)
     console.error("구독자 수 수정 취소 오류:", error instanceof Error ? error.message : error);
     return { ok: false, message: "되돌리지 못했습니다. 잠시 뒤 다시 시도해 주세요." };
   }
-  revalidatePath("/");
+  revalidatePath("/report");
   return { ok: true, message: "자동 수집한 값으로 되돌렸습니다." };
 }

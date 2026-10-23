@@ -33,7 +33,7 @@ npx tsc --noEmit  # 타입 검사 (별도 스크립트 없음)
 ## 디렉터리 구조
 
 ```
-app/            화면과 주소 (page.tsx 숫자, comments/ 댓글, login/ 로그인, api/cron·export)
+app/            화면과 주소 (page.tsx 메인(공개), report/ 숫자, comments/ 댓글, login/ 로그인, api/cron·export)
 lib/            서버 전용 규칙과 외부 연결 (youtube/, comments/, db/, collect.ts, session.ts 등)
 supabase/       저장소 표 정의 (schema.sql)
 proxy.ts        로그인(공유 비밀번호) 접근 제한

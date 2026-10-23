@@ -3,7 +3,7 @@ import Link from "next/link";
 import { logout } from "./login/actions";
 
 const MENU = [
-  { href: "/", label: "숫자", key: "numbers" },
+  { href: "/report", label: "숫자", key: "numbers" },
   { href: "/comments", label: "댓글", key: "comments" },
 ] as const;
 

@@ -5,7 +5,9 @@ import { SESSION_COOKIE, verifySessionToken } from "@/lib/session";
 
 export function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
-  if (pathname === "/login") return NextResponse.next();
+  // 로그인 화면과 메인 화면(/)은 로그인 없이 볼 수 있다. 메인 화면에는 유튜브에 공개된 영상 썸네일만 있고,
+  // 숫자·댓글·엑셀은 계속 로그인이 필요하다.
+  if (pathname === "/login" || pathname === "/") return NextResponse.next();
   if (verifySessionToken(request.cookies.get(SESSION_COOKIE)?.value)) return NextResponse.next();
 
   // 화면이 아닌 요청(API, 저장 동작)은 로그인 화면으로 보내지 않고 거절한다
