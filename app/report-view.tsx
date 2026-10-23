@@ -21,7 +21,23 @@ function DeltaText({ delta }: { delta: Delta }) {
   if (delta.kind === "unavailable") return <span className="text-zinc-500">({LABEL_DELTA_UNAVAILABLE})</span>;
   const v = delta.value;
   const text = v > 0 ? `+${number.format(v)}` : number.format(v); // 줄었으면 음수 그대로
-  return <span className="text-zinc-600 dark:text-zinc-400">({text})</span>;
+  // 한눈에 보이도록 증가는 빨강 ▲, 감소는 파랑 ▼ (한국 금융 화면의 관례). 색만으로 구분하지 않도록 화살표와 부호(+/-)를 함께 쓴다.
+  // 화살표는 화면에만 그리는 장식(CSS)이라, 보고서에 복사해 붙여넣어도 "(+320)"처럼 숫자만 복사된다.
+  if (v > 0) {
+    return (
+      <span className="font-medium text-red-700 dark:text-red-400">
+        (<span className="before:content-['▲_']">{text}</span>)
+      </span>
+    );
+  }
+  if (v < 0) {
+    return (
+      <span className="font-medium text-blue-700 dark:text-blue-400">
+        (<span className="before:content-['▼_']">{text}</span>)
+      </span>
+    );
+  }
+  return <span className="text-zinc-500">({text})</span>;
 }
 
 function Failed() {
