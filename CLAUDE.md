@@ -37,7 +37,7 @@ app/            화면과 주소 (page.tsx 숫자, comments/ 댓글, login/ 로�
 lib/            서버 전용 규칙과 외부 연결 (youtube/, comments/, db/, collect.ts, session.ts 등)
 supabase/       저장소 표 정의 (schema.sql)
 proxy.ts        로그인(공유 비밀번호) 접근 제한
-vercel.json     자동 실행 일정
+supabase/cron.sql  자동 실행 일정 (Supabase pg_cron이 Vercel 주소를 부름, 적용은 scripts/apply-supabase-cron.mjs)
 PRD.md          기획서 (요구사항의 기준)
 PLAN.md         구현 계획 (작업 번호 순서)
 DESIGN.md       설계 (화면·데이터 흐름·기술 선택)

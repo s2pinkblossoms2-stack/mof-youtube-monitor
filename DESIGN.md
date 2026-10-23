@@ -186,10 +186,13 @@ lib/
   time.ts                   한국 시간 ↔ 보고 시각 변환
 scripts/
   google-oauth-setup        채널 관리자 인증을 처음 한 번 발급받는 도구 (로컬 실행)
-vercel.json                 자동 실행 시각 설정
+supabase/cron.sql           자동 실행 시각 설정 (Supabase가 아래 주소를 정해진 시각에 부름)
+scripts/apply-supabase-cron.mjs  위 일정을 Supabase에 적용하는 도구 (비밀 값은 .env에서 읽음)
 ```
 
-### 자동 실행 일정 (vercel.json 항목 4개, 매일 7회 + 월요일 1회 실행)
+### 자동 실행 일정 (Supabase 정기 실행 4개, 매일 7회 + 월요일 1회 실행)
+
+> Vercel 무료(Hobby) 요금제는 자동 실행이 하루 1회로 제한되고 시각도 ±59분 어긋나서(공식 문서 확인), Vercel Cron 대신 **Supabase의 pg_cron + pg_net이 운영 주소의 자동 실행 주소를 부릅니다.** 분 단위로 정확하고 추가 비용이 없습니다. 자동 실행 주소는 그대로 `CRON_SECRET`으로 보호합니다(비밀 값은 Supabase 안의 일정 명령에도 저장됨). 주소가 바뀌면 `node scripts/apply-supabase-cron.mjs https://새주소`로 다시 적용합니다.
 
 Vercel은 세계 표준시(UTC)로 시각을 읽으므로 한국 시간(KST, UTC+9)에서 9시간을 빼서 적습니다.
 
@@ -222,7 +225,7 @@ Vercel은 세계 표준시(UTC)로 시각을 읽으므로 한국 시간(KST, UTC
 
 | 기술 | 쉬운 설명 | 쓰는 곳 | 확인 필요 |
 |---|---|---|---|
-| **Vercel Cron** | 정해진 시각에 서버 기능을 대신 눌러 주는 알람시계 | 4장의 자동 실행 4개 | 요금제에 따라 횟수·정시 정확도 제한 |
+| **Supabase 정기 실행 (pg_cron)** | 정해진 시각에 서버 기능을 대신 눌러 주는 알람시계 (Vercel 무료 요금제의 횟수·정확도 제한 때문에 Vercel Cron 대신 사용) | 4장의 자동 실행 4개 | 배포 주소가 바뀌면 일정을 다시 적용 |
 | **YouTube Data API v3** | 유튜브가 숫자와 댓글을 가져가라고 열어 둔 공식 창구 | 영상 목록, 조회수, 댓글 수, 댓글 읽기 | API 키 필요 (`.env`) |
 | **Google 로그인 인증(OAuth)** | 채널 관리자임을 증명하는 출입증 | 구독자 정확값, 댓글 삭제 | 처음 한 번 발급 도구 실행, 값은 `.env`에 직접 보관 |
 | **Supabase (Postgres)** | 숫자와 댓글을 오래 보관하는 엑셀 같은 표 보관함 | 3장의 표 6개 | **저장소 선택은 사용자 확인 필요**. `.env`에 토큰이 있어 1순위로 제안 |
