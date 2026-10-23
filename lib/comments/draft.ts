@@ -1,6 +1,8 @@
 // 답글 초안 만들기 (PRD 5장 must 2). 초안만 만들고 유튜브에는 올리지 않는다.
 // 근거는 영상 설명과 공식 자료뿐이고, 근거가 없으면 지어내지 않고 "담당자 확인 필요"로 표시한다.
 import { LABEL_NEEDS_CHECK } from "../constants";
+import { MAX_TEXT_LENGTH } from "./classify";
+import { needsHumanCheck } from "./grounding";
 import { askJson } from "./openai";
 
 export type DraftInput = {
@@ -31,20 +33,11 @@ const SCHEMA = {
   properties: { reply: { type: "string" }, needs_check: { type: "boolean" } },
 };
 
-// 답글에 나온 숫자가 댓글·영상 설명·공식 자료 어디에도 없으면 지어낸 것일 수 있다
-function hasUngroundedNumber(reply: string, sources: string): boolean {
-  const numbers = (s: string) => (s.replace(/,/g, "").match(/\d[\d.]*/g) ?? []).map((t) => t.replace(/\.+$/, ""));
-  const known = new Set(numbers(sources));
-  // 줄 맨 앞의 목록 번호("1)", "2.")는 숫자로 보지 않는다
-  const body = reply.replace(/(^|\n)\s*\d+[.)]\s/g, "$1");
-  return numbers(body).some((t) => !known.has(t));
-}
-
 export async function generateDraft(input: DraftInput): Promise<DraftResult> {
   const raw = (await askJson({
     system: SYSTEM,
     user: JSON.stringify({
-      comment: input.comment.slice(0, 1000),
+      comment: input.comment.slice(0, MAX_TEXT_LENGTH),
       video: { title: input.videoTitle, description: input.videoDescription.slice(0, 3000) },
       references: input.references,
     }),
@@ -56,13 +49,13 @@ export async function generateDraft(input: DraftInput): Promise<DraftResult> {
   if (!text) throw new Error("초안이 비어 있습니다.");
   let needsCheck = raw.needs_check === true;
 
-  // 숫자 근거를 못 찾으면 확인이 필요한 초안으로 바꾼다
-  const sources = [input.comment, input.videoTitle, input.videoDescription, ...input.references].join(" ");
-  if (hasUngroundedNumber(text, sources)) needsCheck = true;
+  // 근거(영상 제목·설명·공식 자료)에서 찾을 수 없는 숫자·링크·연락처, 한글로 쓴 수량이 있으면 확인이 필요한 초안으로 바꾼다.
+  // 시청자 댓글은 근거에 넣지 않는다 (댓글이 유도한 숫자·링크가 그대로 통과하지 않게).
+  const evidence = [input.videoTitle, input.videoDescription, ...input.references].join(" ");
+  if (needsHumanCheck(text, evidence)) needsCheck = true;
 
   // 확인이 필요한 초안에는 눈에 띄는 표시가 반드시 있어야 한다
   if (needsCheck && !text.includes(LABEL_NEEDS_CHECK)) text += ` ${MARKER}`;
   return { text, needsCheck };
 }
 
-export { hasUngroundedNumber };

@@ -3,6 +3,8 @@
 import { requireEnv } from "../env";
 
 const BASE_URL = "https://www.googleapis.com/youtube/v3";
+// 응답이 늘어져도 함수가 통째로 꺼지지 않도록 호출마다 시간 제한을 둔다 (넘으면 networkError로 처리)
+const YOUTUBE_TIMEOUT_MS = 12_000;
 
 export class YoutubeApiError extends Error {
   readonly status: number; // HTTP 상태 (네트워크 오류는 0)
@@ -28,7 +30,7 @@ export async function youtubeGet<T>(resource: string, params: Params): Promise<T
   let res: Response;
   try {
     // 수집은 항상 최신 값을 받아야 하므로 캐시하지 않는다
-    res = await fetch(url, { cache: "no-store" });
+    res = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(YOUTUBE_TIMEOUT_MS) });
   } catch {
     // 원래 오류에 주소(키 포함)가 담길 수 있어 내용을 버리고 새로 던진다
     throw new YoutubeApiError(0, "networkError");

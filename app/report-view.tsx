@@ -167,17 +167,27 @@ export default async function ReportView({ searchParams }: { searchParams: Promi
         </section>
         <section className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
           <h2 className="text-sm text-zinc-600 dark:text-zinc-400">수집 상태</h2>
-          <p className="mt-1">
-            {report.collectedAt ? `${formatKstTime(report.collectedAt)} 수집` : "기록 없음"} · 영상 {report.rows.length}개
-            {report.failedCount > 0 ? (
-              <>
-                {" "}
-                / <Failed /> {report.failedCount}개
-              </>
-            ) : (
-              " / 실패 0개"
-            )}
-          </p>
+          {report.rows.length === 0 ? (
+            // 영상 기록이 하나도 없는 보고 시각은 "0개 / 실패 0개"로 두지 않고 수집 실패로 분명히 알린다
+            <p className="mt-1">
+              <Failed />
+              <span className="ml-2 text-sm text-zinc-600 dark:text-zinc-400">
+                이 보고 시각({slot})에는 수집된 영상 기록이 없습니다. 자동 수집이 돌지 않았거나 실패했습니다.
+              </span>
+            </p>
+          ) : (
+            <p className="mt-1">
+              {report.collectedAt ? `${formatKstTime(report.collectedAt)} 수집` : "기록 없음"} · 영상 {report.rows.length}개
+              {report.failedCount > 0 ? (
+                <>
+                  {" "}
+                  / <Failed /> {report.failedCount}개
+                </>
+              ) : (
+                " / 실패 0개"
+              )}
+            </p>
+          )}
         </section>
       </div>
 

@@ -2,15 +2,10 @@
 
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { safeNext } from "@/lib/safe-next";
 import { checkPassword, createSessionToken, SESSION_COOKIE, SESSION_DAYS } from "@/lib/session";
 
 export type LoginState = { error: string };
-
-// 돌아갈 주소는 이 서비스 안의 경로만 허용한다 (다른 사이트로 보내는 주소 방지)
-function safeNext(value: FormDataEntryValue | null): string {
-  const next = typeof value === "string" ? value : "";
-  return next.startsWith("/") && !next.startsWith("//") && !next.startsWith("/login") ? next : "/";
-}
 
 export async function login(_prev: LoginState, formData: FormData): Promise<LoginState> {
   const password = formData.get("password");

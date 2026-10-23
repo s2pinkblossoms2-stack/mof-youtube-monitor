@@ -5,6 +5,9 @@
 import { requireEnv } from "../env";
 import { toKstDate } from "../time";
 
+// 응답이 늘어져도 함수가 통째로 꺼지지 않도록 호출마다 시간 제한을 둔다 (넘으면 networkError로 처리)
+const GOOGLE_TIMEOUT_MS = 12_000;
+
 export class SubscriberError extends Error {
   constructor(readonly reason: string) {
     super(`구독자 수 수집 오류 (${reason})`);
@@ -26,6 +29,7 @@ async function getAccessToken(): Promise<string> {
         grant_type: "refresh_token",
       }),
       cache: "no-store",
+      signal: AbortSignal.timeout(GOOGLE_TIMEOUT_MS),
     });
   } catch {
     throw new SubscriberError("networkError");
@@ -49,6 +53,7 @@ export async function fetchExactSubscriberCount(now: Date): Promise<number> {
     res = await fetch(`https://youtubeanalytics.googleapis.com/v2/reports?${params}`, {
       headers: { Authorization: `Bearer ${accessToken}` },
       cache: "no-store",
+      signal: AbortSignal.timeout(GOOGLE_TIMEOUT_MS),
     });
   } catch {
     throw new SubscriberError("networkError");

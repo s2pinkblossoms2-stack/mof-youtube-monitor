@@ -1,5 +1,6 @@
 "use server";
 
+import { isLoggedIn } from "@/lib/auth";
 import { markCopied } from "@/lib/db/drafts";
 
 const MAX_LENGTH = 5000;
@@ -9,7 +10,8 @@ export async function markDraftCopied(
   commentId: string,
   finalText: string,
 ): Promise<{ ok: boolean; message?: string }> {
-  // 서버 동작은 누구든 부를 수 있는 주소이므로 입력을 먼저 검사한다
+  // 서버 동작은 누구든 부를 수 있는 주소이므로 로그인 여부와 입력을 먼저 검사한다
+  if (!(await isLoggedIn())) return { ok: false, message: "로그인이 필요합니다." };
   if (typeof commentId !== "string" || commentId.length === 0 || commentId.length > 100) {
     return { ok: false, message: "잘못된 요청입니다." };
   }

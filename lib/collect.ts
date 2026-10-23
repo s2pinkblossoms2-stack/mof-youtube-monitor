@@ -89,6 +89,35 @@ export async function runCollect(now: Date): Promise<CollectResult> {
   return { ...result, channel: await collectChannel(now, where.date, where.slot) };
 }
 
+// 수집이 제한 시간(기본 50초, 함수 제한 60초보다 짧게) 안에 끝나지 않으면 기다리지 않고 "수집 실패"로 기록한다.
+// 함수가 강제로 꺼지면 실패 기록도 남지 않아 그 보고 시각이 조용히 비게 되기 때문이다.
+// 이미 성공한 값은 덮어쓰지 않고, 늦게 끝난 수집이 성공 값을 쓰면 그 값이 실패 기록을 대신한다.
+export async function runCollectGuarded(
+  now: Date,
+  limitMs = 50_000,
+  run: (now: Date) => Promise<CollectResult> = runCollect,
+): Promise<CollectResult> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<"timeout">((resolve) => {
+    timer = setTimeout(() => resolve("timeout"), limitMs);
+  });
+  const result = await Promise.race([run(now), timeout]);
+  clearTimeout(timer);
+  if (result !== "timeout") return result;
+
+  const where = reportSlotFor(now);
+  if (!where) return { status: "skipped", reason: "수집 시각 창 밖이라 저장하지 않았습니다." };
+  const { date, slot } = where;
+  const targets = await activeInWindow(now);
+  await saveFailedSnapshots(targets.map((v) => snapshot(v, now, date, slot)));
+  try {
+    await saveFailedChannelSnapshot(date, slot, now);
+  } catch {
+    // 구독자 실패 기록을 남기지 못해도 영상 쪽 결과는 그대로 알린다
+  }
+  return { status: "failed", date, slot, failed: targets.length, message: "수집이 제한 시간을 넘겨 수집 실패로 기록했습니다.", channel: "failed" };
+}
+
 // 5분 뒤 재시도: 실패한 영상과, 아직 성공하지 못한 구독자 수만 다시 받는다.
 export async function runRetry(now: Date): Promise<CollectResult> {
   const result = await retryVideos(now);

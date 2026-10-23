@@ -25,7 +25,9 @@ export async function GET(request: Request) {
       console.error("댓글 단계 오류:", error instanceof Error ? error.message : error);
       comments = { status: "failed" };
     }
-    const ok = retry.status !== "failed" && comments.status !== "failed";
+    // 수집 시각 창 밖에서 실행돼 재시도를 못 한 경우(skipped)도 오류로 알린다
+    const ok =
+      retry.status !== "failed" && retry.status !== "skipped" && retry.channel !== "failed" && comments.status !== "failed";
     return Response.json({ ok, retry, comments }, { status: ok ? 200 : 500 });
   } catch (error) {
     return errorResponse(error);

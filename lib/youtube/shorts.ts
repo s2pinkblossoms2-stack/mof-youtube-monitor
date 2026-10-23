@@ -14,6 +14,7 @@ export async function detectKind(videoId: string, seconds: number | null): Promi
       method: "HEAD",
       redirect: "manual",
       cache: "no-store",
+      signal: AbortSignal.timeout(5_000), // 오래 걸리면 확인하지 못한 것으로 보고 기본값을 쓴다
     });
     if (res.status === 200) return "short";
     if (res.status >= 300 && res.status < 400) return "long";

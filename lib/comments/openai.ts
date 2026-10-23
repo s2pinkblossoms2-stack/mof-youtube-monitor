@@ -3,6 +3,8 @@ import { requireEnv } from "../env";
 
 // 이 서비스에서 쓰는 모델 (환경변수 OPENAI_MODEL로 바꿀 수 있다)
 const DEFAULT_MODEL = "gpt-4.1-mini";
+// 응답이 늘어져도 함수가 통째로 꺼지지 않도록 시간 제한을 둔다 (넘으면 이 묶음은 다음 실행에서 다시 시도)
+const OPENAI_TIMEOUT_MS = 25_000;
 
 export class OpenAiError extends Error {
   readonly status: number;
@@ -41,6 +43,7 @@ export async function askJson(opts: {
         },
       }),
       cache: "no-store",
+      signal: AbortSignal.timeout(OPENAI_TIMEOUT_MS),
     });
   } catch {
     throw new OpenAiError(0);

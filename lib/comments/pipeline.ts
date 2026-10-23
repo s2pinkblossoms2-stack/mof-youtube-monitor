@@ -6,11 +6,13 @@ import { generateDraft } from "./draft";
 import { fetchReferenceTexts } from "./references";
 import { isWithinVideoWindow } from "../time";
 import { fetchCommentPage } from "../youtube/comments";
+import { makeBatches } from "./batches";
 import { classifyBatch } from "./classify";
 import { hasPersonalInfo } from "./pii";
 
 const MAX_PAGES_PER_VIDEO = 5; // 영상 하나에서 한 번에 읽는 최대 페이지 (한 페이지 100개)
 const BATCH_SIZE = 20;
+const BATCH_MAX_CHARS = 20_000; // 한 요청에 담는 댓글 글자 수 상한 (긴 댓글이 많으면 묶음을 더 잘게 나눈다)
 const PARALLEL_BATCHES = 3;
 
 export type CommentRunResult = { collected: number; classified: number; personalInfo: number; pending: number };
@@ -86,8 +88,7 @@ export async function classifyPending(deadline: number, limit = 200): Promise<Om
   }
 
   let classified = 0;
-  const batches: { id: string; body: string }[][] = [];
-  for (let i = 0; i < forAi.length; i += BATCH_SIZE) batches.push(forAi.slice(i, i + BATCH_SIZE));
+  const batches = makeBatches(forAi, BATCH_SIZE, BATCH_MAX_CHARS);
   for (let i = 0; i < batches.length && Date.now() < deadline; i += PARALLEL_BATCHES) {
     const group = batches.slice(i, i + PARALLEL_BATCHES);
     const results = await Promise.allSettled(group.map((b) => classifyBatch(b)));

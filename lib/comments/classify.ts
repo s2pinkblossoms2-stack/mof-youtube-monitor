@@ -55,7 +55,8 @@ const SCHEMA = {
   },
 };
 
-const MAX_TEXT_LENGTH = 500;
+// 유튜브 댓글의 최대 길이(10,000자)까지 모두 보낸다. 앞부분만 보내면 뒤쪽의 욕설·비방을 놓쳐 "욕설 우선" 규칙을 피할 수 있다.
+export const MAX_TEXT_LENGTH = 10_000;
 
 // 한 번에 여러 댓글을 분류한다. AI가 빠뜨린 댓글은 결과에 없고, 호출하는 쪽이 다음에 다시 시도한다.
 export async function classifyBatch(items: { id: string; body: string }[]): Promise<Map<string, CommentClass>> {

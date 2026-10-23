@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { isLoggedIn } from "@/lib/auth";
 import { REPORT_SLOTS } from "@/lib/constants";
 import { clearManualCount, saveManualCount } from "@/lib/db/channel";
 import type { ReportSlot } from "@/lib/types";
@@ -20,6 +21,7 @@ function parseTarget(formData: FormData): { date: string; slot: ReportSlot } | n
 
 // 관리자가 구독자 수를 고친다. 자동 수집한 원래 값은 그대로 두고 고친 값과 고친 사람 이름을 따로 남긴다.
 export async function saveSubscriberCount(_prev: EditState, formData: FormData): Promise<EditState> {
+  if (!(await isLoggedIn())) return { ok: false, message: "로그인이 필요합니다." };
   const target = parseTarget(formData);
   if (!target) return { ok: false, message: "잘못된 요청입니다." };
 
@@ -44,6 +46,7 @@ export async function saveSubscriberCount(_prev: EditState, formData: FormData):
 
 // 고친 값을 지워 자동 수집한 값으로 되돌린다
 export async function resetSubscriberCount(_prev: EditState, formData: FormData): Promise<EditState> {
+  if (!(await isLoggedIn())) return { ok: false, message: "로그인이 필요합니다." };
   const target = parseTarget(formData);
   if (!target) return { ok: false, message: "잘못된 요청입니다." };
   try {

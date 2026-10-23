@@ -18,5 +18,6 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!api/cron|_next/static|_next/image|favicon.ico).*)"],
+  // api/cron/ 아래만 제외한다 (끝에 /를 붙여, 나중에 만드는 api/cron-xxx 같은 주소가 로그인 없이 열리지 않게 함)
+  matcher: ["/((?!api/cron/|_next/static|_next/image|favicon.ico).*)"],
 };
