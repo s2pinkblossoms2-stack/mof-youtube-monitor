@@ -96,7 +96,18 @@ create table if not exists public.deletion_logs (
   comment_body text                                     -- 14일 뒤 null
 );
 
+-- 7) 로그인 시도 기록 (비밀번호 대입 방지: lib/login-throttle.ts)
+-- 접속 주소(IP)는 그대로 저장하지 않고 비밀 열쇠로 섞은 값(해시)만 저장한다. 하루가 지나면 정리한다.
+create table if not exists public.login_attempts (
+  id bigint generated always as identity primary key,
+  client_key text not null,                             -- 접속 주소를 섞은 값
+  attempted_at timestamptz not null default now()
+);
+create index if not exists login_attempts_client_idx on public.login_attempts (client_key, attempted_at);
+create index if not exists login_attempts_time_idx on public.login_attempts (attempted_at);
+
 -- 행 단위 보안: 켜고 정책은 만들지 않는다 (서비스 키만 접근)
+alter table public.login_attempts enable row level security;
 alter table public.videos enable row level security;
 alter table public.video_snapshots enable row level security;
 alter table public.channel_snapshots enable row level security;
