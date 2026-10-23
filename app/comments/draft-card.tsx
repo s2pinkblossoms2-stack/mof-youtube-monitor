@@ -40,7 +40,7 @@ export default function DraftCard({ commentId, initialText, usedAt, youtubeUrl }
 
   return (
     <div className="mt-3 space-y-2">
-      <label htmlFor={`draft-${commentId}`} className="text-sm text-zinc-600 dark:text-zinc-400">
+      <label htmlFor={`draft-${commentId}`} className="text-sm text-muted">
         답글 초안 (고쳐 쓸 수 있습니다)
       </label>
       <textarea
@@ -48,14 +48,14 @@ export default function DraftCard({ commentId, initialText, usedAt, youtubeUrl }
         value={text}
         onChange={(e) => setText(e.target.value)}
         rows={6}
-        className="w-full rounded border border-zinc-300 bg-white p-2 text-sm leading-6 dark:border-zinc-700 dark:bg-zinc-900"
+        className="w-full rounded-xl border border-brand-line bg-white p-3 text-sm leading-6 text-ink"
       />
       <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
           onClick={copy}
           disabled={busy}
-          className="rounded bg-foreground px-3 py-1 text-background disabled:opacity-50"
+          className="rounded-full bg-brand px-4 py-1.5 text-white disabled:opacity-50"
         >
           복사
         </button>
@@ -63,14 +63,14 @@ export default function DraftCard({ commentId, initialText, usedAt, youtubeUrl }
           href={youtubeUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="rounded border border-zinc-300 px-3 py-1 hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
+          className="rounded-full border border-brand-line bg-white px-4 py-1.5 text-ink hover:bg-brand-soft"
         >
           유튜브에서 열기
         </a>
-        {used && <span className="text-sm text-green-700 dark:text-green-400">{used}</span>}
+        {used && <span className="text-sm text-green-700">{used}</span>}
       </div>
-      <p className="text-xs text-zinc-500">※ 자동으로 유튜브에 올라가지 않습니다. 복사한 뒤 직접 게시해 주세요.</p>
-      <p aria-live="polite" className="text-sm text-zinc-700 dark:text-zinc-300">
+      <p className="text-xs text-muted">※ 자동으로 유튜브에 올라가지 않습니다. 복사한 뒤 직접 게시해 주세요.</p>
+      <p aria-live="polite" className="text-sm text-muted">
         {message}
       </p>
     </div>

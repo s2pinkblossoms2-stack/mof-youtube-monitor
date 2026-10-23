@@ -1,5 +1,9 @@
 import type { Metadata } from "next";
+import { Noto_Sans_KR } from "next/font/google";
 import "./globals.css";
+
+// 메인 소개 화면과 같은 글꼴을 모든 화면에 쓴다
+const sans = Noto_Sans_KR({ subsets: ["latin"], weight: ["400", "500", "700", "800"], display: "swap" });
 
 export const metadata: Metadata = {
   title: {
@@ -14,7 +18,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="ko" className="h-full antialiased">
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className={`${sans.className} min-h-full flex flex-col`}>{children}</body>
     </html>
   );
 }
