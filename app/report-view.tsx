@@ -66,7 +66,7 @@ function DayDeltaView({ delta }: { delta: DayDelta }) {
   if (delta.kind === "unavailable") return <span className="text-muted">{LABEL_DELTA_UNAVAILABLE}</span>;
   const v = delta.value;
   // 아주 작은 변화(0.1% 미만)가 "-0.0%"로 보이지 않도록 소수 둘째 자리까지 보여 준다
-  const pctText = (p: number) => `${p > 0 ? "+" : ""}${Math.abs(p) < 0.1 ? p.toFixed(2) : p.toFixed(1)}%`;
+  const pctText = (p: number) => p === 0 ? "0%" : `${p > 0 ? "+" : ""}${Math.abs(p) < 0.1 ? p.toFixed(2) : p.toFixed(1)}%`;
   const pct = delta.percent === null ? "" : ` (${pctText(delta.percent)})`;
   if (v === 0) return <span className="text-muted">0{pct}</span>;
   const up = v > 0;
@@ -105,7 +105,11 @@ function MetricTable({ title, rows, pick }: { title: string; rows: DayRow[]; pic
                   {s}
                 </th>
               ))}
-              <th className="bg-brand-soft px-3 py-2 text-right font-bold">하루 증감 (전날 17시 대비)</th>
+              <th className="bg-brand-soft px-3 py-2 text-right font-bold">
+                하루 증감
+                <br />
+                <span className="font-medium">(전날 17시 대비)</span>
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -241,7 +245,7 @@ export default async function ReportView({ searchParams }: { searchParams: Promi
           href={`/api/export?date=${date}`}
           className="rounded-full border border-brand-line bg-white px-4 py-1.5 text-ink hover:bg-brand-soft"
         >
-          엑셀로 내려받기
+          PDF로 내려받기 (월요일부터 이 주 누적)
         </a>
         {!report.dayReady && (
           <p className="text-sm text-muted">이 날의 17:00 수집이 끝나면 &quot;하루 증감&quot;(전날 17시 대비)이 표시됩니다.</p>

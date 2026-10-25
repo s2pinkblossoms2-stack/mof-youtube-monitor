@@ -1,6 +1,7 @@
-// 엑셀 내려받기: /api/export?date=YYYY-MM-DD (보고 시각 10:00 / 14:00 / 17:00 시트 3개)
+// PDF 내려받기: /api/export?date=YYYY-MM-DD → 그 날짜가 속한 주의 월요일부터 그 날짜까지 누적한 주간 보고서
 import { isLoggedIn } from "@/lib/auth";
-import { buildReportWorkbook } from "@/lib/export";
+import { buildWeeklyPdf } from "@/lib/pdf";
+import { mondayOf } from "@/lib/week-report";
 
 export const maxDuration = 60;
 
@@ -10,21 +11,21 @@ export async function GET(request: Request) {
     return Response.json({ ok: false, message: "로그인이 필요합니다." }, { status: 401 });
   }
   const date = new URL(request.url).searchParams.get("date") ?? "";
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(new Date(`${date}T00:00:00Z`).getTime())) {
     return Response.json({ ok: false, message: "날짜를 YYYY-MM-DD 형식으로 입력해 주세요." }, { status: 400 });
   }
   try {
-    const file = await buildReportWorkbook(date);
-    if (!file) return Response.json({ ok: false, message: "해당 날짜의 기록이 없습니다." }, { status: 404 });
+    const file = await buildWeeklyPdf(date);
+    if (!file) return Response.json({ ok: false, message: "해당 주의 기록이 없습니다." }, { status: 404 });
     return new Response(new Uint8Array(file), {
       headers: {
-        "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        "Content-Disposition": `attachment; filename="report-${date}.xlsx"`,
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `attachment; filename="weekly-report-${mondayOf(date)}_${date}.pdf"`,
         "Cache-Control": "no-store",
       },
     });
   } catch (error) {
-    console.error("엑셀 만들기 오류:", error instanceof Error ? error.message : error);
-    return Response.json({ ok: false, message: "엑셀 파일을 만들지 못했습니다." }, { status: 500 });
+    console.error("PDF 만들기 오류:", error instanceof Error ? error.message : error);
+    return Response.json({ ok: false, message: "PDF 파일을 만들지 못했습니다." }, { status: 500 });
   }
 }
