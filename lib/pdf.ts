@@ -326,19 +326,10 @@ export async function buildWeeklyPdf(date: string): Promise<Buffer | null> {
   doc.y += 30;
   drawSubscriberChart(doc, week);
 
-  // ── 주간 요약: 구독자 표, 영상별 하루 증감과 주간 누적 ──
-  doc.addPage();
-  doc.x = left;
-  doc.y = doc.page.margins.top;
-  doc.fillColor(BRAND).fontSize(18);
-  setFont(doc, true);
-  doc.text("주간 요약", left, doc.y, { lineBreak: false });
-  doc.y += 28;
-  note(doc, "숫자는 유튜브가 제공한 값 그대로이며, 수집에 실패한 값은 추측하거나 채우지 않고 '수집 실패'로 표시합니다. 증감은 저장된 값에서 계산합니다.");
-
+  // 구독자 수 표(정확한 값): 그래프 아래에 작게 둔다
   const subRows = subscriberRows(week);
   if (subRows.length > 0) {
-    heading(doc, "구독자 수 (수집할 때마다)");
+    heading(doc, "구독자 수 (수집할 때마다)", 12);
     drawTable(
       doc,
       [
@@ -346,15 +337,31 @@ export async function buildWeeklyPdf(date: string): Promise<Buffer | null> {
         ...REPORT_SLOTS.map((s) => ({ header: s, width: 150, align: "right" as const })),
       ],
       subRows,
+      { rowH: 14, size: 8 },
     );
-    note(doc, "* 관리자가 고친 값입니다. 구독자 수는 유튜브 집계 보고서 기준이라 스튜디오와 몇 명 다를 수 있습니다.");
+    note(doc, "* 관리자가 고친 값입니다.");
   }
 
-  if (week.videos.length > 0) {
-    heading(doc, "조회수: 하루 증감 (전날 17시 대비 오늘 17시) 과 주간 누적");
-    drawTable(doc, weekMatrixCols(week, "조회수"), weekMatrixRows(week, "viewDays", "latestViews"));
-    heading(doc, "댓글 수: 하루 증감 (전날 17시 대비 오늘 17시) 과 주간 누적");
-    drawTable(doc, weekMatrixCols(week, "댓글 수"), weekMatrixRows(week, "commentDays", "latestComments"));
+  // ── 주간 요약: 조회수와 댓글 수를 각각 다른 장에 ──
+  for (const [title, pick, latest] of [
+    ["조회수", "viewDays", "latestViews"],
+    ["댓글 수", "commentDays", "latestComments"],
+  ] as const) {
+    doc.addPage();
+    doc.x = left;
+    doc.y = doc.page.margins.top;
+    doc.fillColor(BRAND).fontSize(18);
+    setFont(doc, true);
+    doc.text(`주간 요약: ${title}`, left, doc.y, { lineBreak: false });
+    doc.y += 28;
+    note(doc, "하루 증감은 전날 17시 대비 오늘 17시이고, 주간 누적 증감은 이 주에 계산된 하루 증감의 합입니다. 수집에 실패한 값은 추측하거나 채우지 않고 '수집 실패'·'비교 불가'로 표시합니다.");
+    if (week.videos.length === 0) {
+      doc.fillColor(MUTED).fontSize(12);
+      setFont(doc, false);
+      doc.text("이 주에는 수집된 영상 기록이 없습니다.", left, doc.y);
+    } else {
+      drawTable(doc, weekMatrixCols(week, title), weekMatrixRows(week, pick, latest));
+    }
   }
 
   doc.end();
@@ -394,7 +401,7 @@ function drawSubscriberChart(doc: PDFKit.PDFDocument, week: WeekReport): void {
   const plotX = left + 62;
   const plotW = doc.page.width - left * 2 - 62 - 10;
   const plotY = doc.y + 30;
-  const plotH = 250;
+  const plotH = 200;
   const step = points.length > 1 ? plotW / (points.length - 1) : 0;
   const x = (i: number) => (points.length > 1 ? plotX + i * step : plotX + plotW / 2);
   const y = (v: number) => plotY + plotH - ((v - min) / (max - min)) * plotH;
