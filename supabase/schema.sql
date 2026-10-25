@@ -114,3 +114,16 @@ alter table public.channel_snapshots enable row level security;
 alter table public.comments enable row level security;
 alter table public.reply_drafts enable row level security;
 alter table public.deletion_logs enable row level security;
+
+-- 관리자가 고친 조회수·댓글 수 (자동 수집한 원래 값은 그대로 두고 고친 값과 고친 사람·시각을 따로 저장한다)
+-- 조회수와 댓글 수는 함께 고치므로 네 칸이 모두 있거나 모두 없어야 한다.
+alter table public.video_snapshots
+  add column if not exists manual_view_count bigint check (manual_view_count is null or manual_view_count >= 0),
+  add column if not exists manual_comment_count bigint check (manual_comment_count is null or manual_comment_count >= 0),
+  add column if not exists manual_by text,
+  add column if not exists manual_at timestamptz;
+alter table public.video_snapshots drop constraint if exists video_snapshots_manual_pair;
+alter table public.video_snapshots add constraint video_snapshots_manual_pair check (
+  (manual_view_count is null and manual_comment_count is null and manual_by is null and manual_at is null)
+  or (manual_view_count is not null and manual_comment_count is not null and manual_by is not null and manual_at is not null)
+);

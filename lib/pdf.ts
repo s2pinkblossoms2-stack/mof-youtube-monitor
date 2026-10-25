@@ -63,6 +63,8 @@ function slotParts(cell: SlotCell): Part[] {
   if (cell.state === "none") return [{ text: "—", color: MUTED }];
   if (cell.state === "failed") return [{ text: LABEL_COLLECT_FAILED, color: UP, bold: true }];
   const parts: Part[] = [{ text: number.format(cell.value) }];
+  // 관리자가 고친 값에는 *를 붙인다
+  if (cell.manual) parts.push({ text: "*", color: "#92400e", bold: true });
   const d = cell.delta;
   if (d.kind === "new") parts.push({ text: ` (${LABEL_DELTA_NEW})`, color: MUTED });
   else if (d.kind === "unavailable") parts.push({ text: ` (${LABEL_DELTA_UNAVAILABLE})`, color: MUTED });
@@ -313,7 +315,7 @@ export async function buildWeeklyPdf(date: string): Promise<Buffer | null> {
     const status = day.slots
       .map((s) => `${s.slot} ${s.videoCount === 0 ? "기록 없음" : `${s.videoCount}개${s.failedCount > 0 ? ` (수집 실패 ${s.failedCount}개)` : ""}`}`)
       .join("   ");
-    note(doc, `수집 상태: ${status}    * 관리자가 고친 구독자 수    ▲ 증가(빨강), ▼ 감소(파랑)`);
+    note(doc, `수집 상태: ${status}    * 관리자가 고친 값(구독자 수·조회수·댓글 수)    ▲ 증가(빨강), ▼ 감소(파랑)`);
   });
 
   // ── 구독자 수 그래프: 월요일부터 수집할 때마다(10:00 / 14:00 / 17:00) 누적 ──

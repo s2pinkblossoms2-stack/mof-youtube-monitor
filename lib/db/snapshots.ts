@@ -10,6 +10,10 @@ type SnapshotRow = {
   status: SnapshotStatus;
   view_count: number | null;
   comment_count: number | null;
+  manual_view_count?: number | null;
+  manual_comment_count?: number | null;
+  manual_by?: string | null;
+  manual_at?: string | null;
 };
 
 function toRow(s: VideoSnapshot): SnapshotRow {
@@ -33,6 +37,10 @@ function toSnapshot(r: SnapshotRow): VideoSnapshot {
     status: r.status,
     viewCount: r.view_count === null ? null : Number(r.view_count),
     commentCount: r.comment_count === null ? null : Number(r.comment_count),
+    manual:
+      r.manual_view_count != null && r.manual_comment_count != null && r.manual_by && r.manual_at
+        ? { viewCount: Number(r.manual_view_count), commentCount: Number(r.manual_comment_count), by: r.manual_by, at: r.manual_at }
+        : undefined,
   };
 }
 
@@ -68,4 +76,37 @@ export async function listSlotSnapshots(
     .eq("report_slot", reportSlot);
   if (error) throw dbError("수집 기록 읽기", error);
   return ((data ?? []) as SnapshotRow[]).map(toSnapshot);
+}
+
+// 관리자가 조회수·댓글 수를 고친다. 자동 수집한 원래 값(view_count 등)은 건드리지 않고 고친 값과 고친 사람·시각만 따로 저장한다.
+// 고칠 기록이 없으면(그 보고 시각에 수집 기록이 없으면) false를 돌려준다.
+export async function saveManualVideoCounts(
+  videoId: string,
+  reportDate: string,
+  reportSlot: ReportSlot,
+  viewCount: number,
+  commentCount: number,
+  by: string,
+  now: Date,
+): Promise<boolean> {
+  const { data, error } = await getDb()
+    .from("video_snapshots")
+    .update({ manual_view_count: viewCount, manual_comment_count: commentCount, manual_by: by, manual_at: now.toISOString() })
+    .eq("video_id", videoId)
+    .eq("report_date", reportDate)
+    .eq("report_slot", reportSlot)
+    .select("id");
+  if (error) throw dbError("조회수·댓글 수 고치기", error);
+  return (data ?? []).length > 0;
+}
+
+// 고친 값을 지워 자동 수집한 값으로 되돌린다
+export async function clearManualVideoCounts(videoId: string, reportDate: string, reportSlot: ReportSlot): Promise<void> {
+  const { error } = await getDb()
+    .from("video_snapshots")
+    .update({ manual_view_count: null, manual_comment_count: null, manual_by: null, manual_at: null })
+    .eq("video_id", videoId)
+    .eq("report_date", reportDate)
+    .eq("report_slot", reportSlot);
+  if (error) throw dbError("조회수·댓글 수 되돌리기", error);
 }
