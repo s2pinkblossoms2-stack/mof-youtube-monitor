@@ -3,6 +3,7 @@ import ExcelJS from "exceljs";
 import { LABEL_COLLECT_FAILED, LABEL_DELTA_NEW, LABEL_DELTA_UNAVAILABLE, REPORT_SLOTS } from "./constants";
 import type { Delta } from "./delta";
 import { getReportData } from "./db/report";
+import { buildDayReport, type DayDelta } from "./day-report";
 import { buildReport, shownSubscribers } from "./report";
 import type { ReportSlot } from "./types";
 
@@ -89,5 +90,50 @@ export async function buildReportWorkbook(date: string): Promise<Buffer | null> 
   }
 
   if (!anyData) return null;
+
+  // 마지막 시트: 전날 17:00 대비 오늘 17:00의 하루 증감 (화면의 "하루 증감"과 같은 값)
+  const day = await buildDayReport(date);
+  const daySheet = workbook.addWorksheet("하루 증감");
+  daySheet.getCell("A1").value = `보고 날짜 ${date} · 전날 17:00 대비 오늘 17:00 하루 증감`;
+  daySheet.getCell("A1").font = { bold: true, size: 13 };
+  const dayCols = [
+    { header: "구분", width: 8 },
+    { header: "제목", width: 60 },
+    { header: "업로드일", width: 12 },
+    { header: "조회수 전날 17시", width: 16 },
+    { header: "조회수 오늘 17시", width: 16 },
+    { header: "조회수 증감", width: 14 },
+    { header: "조회수 증감률(%)", width: 16 },
+    { header: "댓글 수 전날 17시", width: 18 },
+    { header: "댓글 수 오늘 17시", width: 18 },
+    { header: "댓글 수 증감", width: 14 },
+    { header: "댓글 수 증감률(%)", width: 18 },
+  ];
+  const dh = daySheet.getRow(3);
+  dayCols.forEach((c, i) => {
+    dh.getCell(i + 1).value = c.header;
+    daySheet.getColumn(i + 1).width = c.width;
+  });
+  dh.font = { bold: true };
+  dh.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE8EAED" } };
+  // 계산된 값은 숫자로, 아닌 경우는 글자로 적는다 (추측하거나 채우지 않음)
+  const dayCells = (delta: DayDelta): ExcelJS.CellValue[] => {
+    if (delta.kind === "pending") return ["17시 수집 전", "17시 수집 전", "17시 수집 전", "17시 수집 전"];
+    if (delta.kind === "new") return [LABEL_DELTA_NEW, LABEL_DELTA_NEW, LABEL_DELTA_NEW, LABEL_DELTA_NEW];
+    if (delta.kind === "unavailable") return Array(4).fill(LABEL_DELTA_UNAVAILABLE);
+    return [delta.before, delta.after, delta.value, delta.percent === null ? LABEL_DELTA_UNAVAILABLE : Math.round(delta.percent * 10) / 10];
+  };
+  day.rows.forEach((row, i) => {
+    const r = daySheet.getRow(4 + i);
+    r.getCell(1).value = row.video.kind === "short" ? "쇼츠" : "롱폼";
+    r.getCell(2).value = row.video.title;
+    r.getCell(3).value = row.video.uploadedAt.slice(0, 10);
+    dayCells(row.viewDay).forEach((v, k) => (r.getCell(4 + k).value = v));
+    dayCells(row.commentDay).forEach((v, k) => (r.getCell(8 + k).value = v));
+    for (const col of [4, 5, 8, 9]) r.getCell(col).numFmt = "#,##0";
+    for (const col of [6, 10]) r.getCell(col).numFmt = "+#,##0;-#,##0;0";
+    for (const col of [7, 11]) r.getCell(col).numFmt = "+0.0;-0.0;0.0";
+    for (let col = 4; col <= 11; col++) r.getCell(col).alignment = { horizontal: "right" };
+  });
   return Buffer.from(await workbook.xlsx.writeBuffer());
 }
