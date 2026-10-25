@@ -41,7 +41,7 @@ export function shownSubscribers(channel: ChannelSnapshot | null): ShownSubscrib
   return { kind: "auto", value: channel.subscriberCount };
 }
 
-function metric(snapshot: VideoSnapshot | undefined, pick: (s: VideoSnapshot) => number | null): Metric {
+export function metric(snapshot: VideoSnapshot | undefined, pick: (s: VideoSnapshot) => number | null): Metric {
   if (!snapshot) return undefined;
   const value = pick(snapshot);
   return snapshot.status === "ok" && value !== null ? { status: "ok", value } : { status: "failed" };

@@ -102,3 +102,20 @@ export async function clearManualCount(date: string, slot: ReportSlot): Promise<
     .eq("report_slot", slot);
   if (error) throw dbError("구독자 수 수정 취소", error);
 }
+
+// 그래프용: 선택한 날짜까지 최근 며칠(기본 7일)의 구독자 기록 (오래된 순)
+export async function listChannelSnapshotsUpTo(date: string, dayCount = 7): Promise<ChannelSnapshot[]> {
+  const { data, error } = await getDb()
+    .from("channel_snapshots")
+    .select("*")
+    .lte("report_date", date)
+    .order("report_date", { ascending: false })
+    .limit(dayCount * 3 + 3);
+  if (error) throw dbError("구독자 기록 목록 읽기", error);
+  const rows = (data ?? []) as Row[];
+  const dates = [...new Set(rows.map((r) => r.report_date))].slice(0, dayCount);
+  return rows
+    .filter((r) => dates.includes(r.report_date))
+    .map(toChannelSnapshot)
+    .sort((a, b) => a.reportDate.localeCompare(b.reportDate) || a.reportSlot.localeCompare(b.reportSlot));
+}
