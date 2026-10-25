@@ -8,6 +8,8 @@ export type ReportRow = {
   failed: boolean; // 이 보고 시각 수집이 실패했는지
   viewCount: number | null;
   commentCount: number | null;
+  // 관리자가 고친 값이면 그 정보와 자동 수집한 원래 값 (viewCount·commentCount는 고친 값이 들어 있다)
+  manual?: { by: string; at: string; autoView: number | null; autoComment: number | null };
   viewDelta: Delta;
   commentDelta: Delta;
 };
@@ -41,8 +43,15 @@ export function shownSubscribers(channel: ChannelSnapshot | null): ShownSubscrib
   return { kind: "auto", value: channel.subscriberCount };
 }
 
-export function metric(snapshot: VideoSnapshot | undefined, pick: (s: VideoSnapshot) => number | null): Metric {
-  if (!snapshot) return undefined;
+// 관리자가 고친 값이 있으면 그 값을 쓴다 (자동 수집한 원래 값은 저장소에 그대로 남아 있다)
+export function effective(s: VideoSnapshot): VideoSnapshot {
+  if (!s.manual) return s;
+  return { ...s, status: "ok", viewCount: s.manual.viewCount, commentCount: s.manual.commentCount };
+}
+
+export function metric(raw: VideoSnapshot | undefined, pick: (s: VideoSnapshot) => number | null): Metric {
+  if (!raw) return undefined;
+  const snapshot = effective(raw);
   const value = pick(snapshot);
   return snapshot.status === "ok" && value !== null ? { status: "ok", value } : { status: "failed" };
 }
@@ -50,7 +59,8 @@ export function metric(snapshot: VideoSnapshot | undefined, pick: (s: VideoSnaps
 export function buildReport(data: ReportData): ReportSummary {
   const prevById = new Map(data.previous.map((s) => [s.videoId, s]));
   const rows: ReportRow[] = [];
-  for (const s of data.snapshots) {
+  for (const raw of data.snapshots) {
+    const s = effective(raw);
     const video = data.videos.get(s.videoId);
     if (!video) continue;
     const prev = prevById.get(s.videoId);
@@ -59,6 +69,9 @@ export function buildReport(data: ReportData): ReportSummary {
       failed: s.status === "failed",
       viewCount: s.viewCount,
       commentCount: s.commentCount,
+      manual: raw.manual
+        ? { by: raw.manual.by, at: raw.manual.at, autoView: raw.status === "ok" ? raw.viewCount : null, autoComment: raw.status === "ok" ? raw.commentCount : null }
+        : undefined,
       viewDelta: calcDelta(metric(s, (x) => x.viewCount), metric(prev, (x) => x.viewCount), data.previousCollected),
       commentDelta: calcDelta(
         metric(s, (x) => x.commentCount),

@@ -29,6 +29,8 @@ export type VideoSnapshot = {
   status: SnapshotStatus;
   viewCount: number | null; // status가 failed이면 null
   commentCount: number | null;
+  // 관리자가 고친 값 (있으면 화면·PDF에 이 값을 보여준다. 자동 수집한 원래 값은 그대로 남는다)
+  manual?: { viewCount: number; commentCount: number; by: string; at: string };
 };
 
 // 채널 전체 구독자 수 기록

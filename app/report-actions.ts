@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { isLoggedIn } from "@/lib/auth";
 import { REPORT_SLOTS } from "@/lib/constants";
 import { clearManualCount, saveManualCount } from "@/lib/db/channel";
+import { clearManualVideoCounts, saveManualVideoCounts } from "@/lib/db/snapshots";
 import type { ReportSlot } from "@/lib/types";
 
 export type EditState = { ok: boolean; message: string };
@@ -53,6 +54,57 @@ export async function resetSubscriberCount(_prev: EditState, formData: FormData)
     await clearManualCount(target.date, target.slot);
   } catch (error) {
     console.error("구독자 수 수정 취소 오류:", error instanceof Error ? error.message : error);
+    return { ok: false, message: "되돌리지 못했습니다. 잠시 뒤 다시 시도해 주세요." };
+  }
+  revalidatePath("/report");
+  return { ok: true, message: "자동 수집한 값으로 되돌렸습니다." };
+}
+
+// ── 조회수·댓글 수 고치기 (구독자 수와 같은 방식: 자동 수집한 원래 값은 두고 고친 값·이름·시각을 따로 저장) ──
+function parseVideoTarget(formData: FormData): { date: string; slot: ReportSlot; videoId: string } | null {
+  const target = parseTarget(formData);
+  const videoId = formData.get("videoId");
+  if (!target || typeof videoId !== "string" || !/^[A-Za-z0-9_-]{6,20}$/.test(videoId)) return null;
+  return { ...target, videoId };
+}
+
+function parseCount(raw: FormDataEntryValue | null): number | null {
+  const text = typeof raw === "string" ? raw.replace(/[,\s]/g, "") : "";
+  if (!/^\d{1,10}$/.test(text)) return null;
+  const n = Number(text);
+  return n <= MAX_COUNT ? n : null;
+}
+
+export async function saveVideoCounts(_prev: EditState, formData: FormData): Promise<EditState> {
+  if (!(await isLoggedIn())) return { ok: false, message: "로그인이 필요합니다." };
+  const target = parseVideoTarget(formData);
+  if (!target) return { ok: false, message: "잘못된 요청입니다." };
+  const name = formData.get("name");
+  const by = typeof name === "string" ? name.trim() : "";
+  if (by.length === 0 || by.length > 30) return { ok: false, message: "고치는 사람 이름을 30자 이내로 입력해 주세요." };
+  const views = parseCount(formData.get("views"));
+  const comments = parseCount(formData.get("comments"));
+  if (views === null || comments === null) return { ok: false, message: "조회수와 댓글 수는 0 이상의 숫자로 입력해 주세요." };
+
+  try {
+    const saved = await saveManualVideoCounts(target.videoId, target.date, target.slot, views, comments, by, new Date());
+    if (!saved) return { ok: false, message: "그 보고 시각에는 이 영상의 수집 기록이 없어 고칠 수 없습니다." };
+  } catch (error) {
+    console.error("조회수·댓글 수 수정 오류:", error instanceof Error ? error.message : error);
+    return { ok: false, message: "저장하지 못했습니다. 잠시 뒤 다시 시도해 주세요." };
+  }
+  revalidatePath("/report");
+  return { ok: true, message: "고친 값을 저장했습니다. 화면과 PDF에 이 값이 쓰입니다." };
+}
+
+export async function resetVideoCounts(_prev: EditState, formData: FormData): Promise<EditState> {
+  if (!(await isLoggedIn())) return { ok: false, message: "로그인이 필요합니다." };
+  const target = parseVideoTarget(formData);
+  if (!target) return { ok: false, message: "잘못된 요청입니다." };
+  try {
+    await clearManualVideoCounts(target.videoId, target.date, target.slot);
+  } catch (error) {
+    console.error("조회수·댓글 수 수정 취소 오류:", error instanceof Error ? error.message : error);
     return { ok: false, message: "되돌리지 못했습니다. 잠시 뒤 다시 시도해 주세요." };
   }
   revalidatePath("/report");

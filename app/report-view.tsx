@@ -9,6 +9,7 @@ import { shownSubscribers } from "@/lib/report";
 import { formatKstDateTime, formatKstTime } from "@/lib/time";
 import SubscriberChart from "./subscriber-chart";
 import SubscriberEdit from "./subscriber-edit";
+import VideoEdit, { type VideoEditOption } from "./video-edit";
 
 type Params = Record<string, string | string[] | undefined>;
 
@@ -54,7 +55,13 @@ function SlotCellView({ cell }: { cell: SlotCell }) {
   if (cell.state === "failed") return <Failed />;
   return (
     <span>
-      {number.format(cell.value)} <DeltaText delta={cell.delta} />
+      {number.format(cell.value)}
+      {cell.manual && (
+        <span className="text-amber-800" title={`관리자가 고친 값 (${cell.manual.by})`}>
+          *
+        </span>
+      )}{" "}
+      <DeltaText delta={cell.delta} />
     </span>
   );
 }
@@ -205,6 +212,35 @@ function StatusCard({ report }: { report: DayReport }) {
   );
 }
 
+// 고치기 칸에 넘길 영상별·보고 시각별 현재 값
+function editOptions(report: DayReport): VideoEditOption[] {
+  return report.rows.map((row) => ({
+    videoId: row.video.id,
+    title: row.video.title,
+    slots: Object.fromEntries(
+      REPORT_SLOTS.map((s) => {
+        const v = row.views[s];
+        const c = row.comments[s];
+        if (v.state === "none" || c.state === "none") return [s, undefined]; // 그 보고 시각 기록이 없음
+        // 수집 실패한 칸은 값을 비워 두고, 담당자가 스튜디오 숫자를 직접 넣을 수 있게 한다
+        if (v.state === "failed" || c.state === "failed") {
+          return [s, { views: null, comments: null, manualBy: null, autoViews: null, autoComments: null }];
+        }
+        return [
+          s,
+          {
+            views: v.value,
+            comments: c.value,
+            manualBy: v.manual?.by ?? null,
+            autoViews: v.manual?.autoValue ?? null,
+            autoComments: c.manual?.autoValue ?? null,
+          },
+        ];
+      }),
+    ),
+  }));
+}
+
 export default async function ReportView({ searchParams }: { searchParams: Promise<Params> }) {
   const params = await searchParams;
   const [dates, latest] = await Promise.all([listReportDates(), getLatestReportSlot()]);
@@ -245,7 +281,7 @@ export default async function ReportView({ searchParams }: { searchParams: Promi
           href={`/api/export?date=${date}`}
           className="rounded-full border border-brand-line bg-white px-4 py-1.5 text-ink hover:bg-brand-soft"
         >
-          PDF로 내려받기 (월요일부터 이 주 누적)
+          PDF로 내려받기
         </a>
         {!report.dayReady && (
           <p className="text-sm text-muted">이 날의 17:00 수집이 끝나면 &quot;하루 증감&quot;(전날 17시 대비)이 표시됩니다.</p>
@@ -262,6 +298,8 @@ export default async function ReportView({ searchParams }: { searchParams: Promi
         <SubscriberChart snapshots={history} />
       </section>
 
+      {report.rows.length > 0 && <VideoEdit date={date} slotNames={[...REPORT_SLOTS]} videos={editOptions(report)} />}
+
       {report.rows.length === 0 ? (
         <p className="rounded-2xl border border-brand-line bg-brand-wash p-6 text-muted">
           이 날에는 수집된 영상 기록이 없습니다. 자동 수집이 돌지 않았거나 실패했습니다.
@@ -270,6 +308,7 @@ export default async function ReportView({ searchParams }: { searchParams: Promi
         <>
           <MetricTable title="조회수" rows={report.rows} pick="views" />
           <MetricTable title="댓글 수" rows={report.rows} pick="comments" />
+          <p className="text-xs text-muted">* 관리자가 고친 값입니다 (자동 수집한 원래 값은 &quot;조회수·댓글 수 고치기&quot;에서 확인할 수 있습니다).</p>
         </>
       )}
     </div>

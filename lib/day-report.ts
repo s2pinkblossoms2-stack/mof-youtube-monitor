@@ -4,11 +4,15 @@
 import { REPORT_SLOTS } from "./constants";
 import { calcDelta, type Delta } from "./delta";
 import { getReportData } from "./db/report";
-import { buildReport, metric } from "./report";
+import { buildReport, effective, metric } from "./report";
 import type { ChannelSnapshot, ReportSlot, Video, VideoSnapshot } from "./types";
 
 // 한 보고 시각 칸: 아직 기록 없음 / 수집 실패 / 값과 직전 보고 시각 대비 증가량
-export type SlotCell = { state: "none" } | { state: "failed" } | { state: "ok"; value: number; delta: Delta };
+// manual: 관리자가 고친 값이면 고친 사람과 자동 수집한 원래 값
+export type SlotCell =
+  | { state: "none" }
+  | { state: "failed" }
+  | { state: "ok"; value: number; delta: Delta; manual?: { by: string; autoValue: number | null } };
 
 // 하루 증감: 전날 17:00 → 오늘 17:00. 17:00 수집 전이면 pending.
 export type DayDelta =
@@ -53,7 +57,7 @@ function dayDelta(
   const delta = calcDelta(metric(today, pick), metric(yesterday, pick), yesterdayCollected);
   if (delta.kind === "unavailable") return { kind: "unavailable" };
   if (delta.kind === "new") return { kind: "new" };
-  const before = yesterday ? pick(yesterday) : null;
+  const before = yesterday ? pick(effective(yesterday)) : null;
   // 증감률은 전날 값이 0보다 클 때만 계산한다 (0으로 나누지 않음)
   const percent = before !== null && before > 0 ? (delta.value / before) * 100 : null;
   return { kind: "change", value: delta.value, percent, before: before ?? 0, after: (before ?? 0) + delta.value };
@@ -79,11 +83,23 @@ export async function buildDayReport(date: string): Promise<DayReport> {
       const row = reports[i].rows.find((r) => r.video.id === video.id);
       if (!row) return;
       views[slot] =
-        row.failed || row.viewCount === null ? { state: "failed" } : { state: "ok", value: row.viewCount, delta: row.viewDelta };
+        row.failed || row.viewCount === null
+          ? { state: "failed" }
+          : {
+              state: "ok",
+              value: row.viewCount,
+              delta: row.viewDelta,
+              manual: row.manual ? { by: row.manual.by, autoValue: row.manual.autoView } : undefined,
+            };
       comments[slot] =
         row.failed || row.commentCount === null
           ? { state: "failed" }
-          : { state: "ok", value: row.commentCount, delta: row.commentDelta };
+          : {
+              state: "ok",
+              value: row.commentCount,
+              delta: row.commentDelta,
+              manual: row.manual ? { by: row.manual.by, autoValue: row.manual.autoComment } : undefined,
+            };
     });
     const t = today.get(video.id);
     const y = yesterday.get(video.id);
