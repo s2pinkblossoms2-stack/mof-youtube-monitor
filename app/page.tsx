@@ -13,9 +13,9 @@ const hand = Nanum_Pen_Script({ subsets: ["latin"], weight: "400", display: "swa
 
 // 메인(/)만 검색에 나오게 연다. 나머지 화면은 layout.tsx의 noindex를 그대로 따른다.
 export const metadata: Metadata = {
-  title: { absolute: "재정경제부 유튜브 모니터링 | 영상 조회수·댓글 수 하루 3회 기록과 질문 댓글 답글 초안" },
+  title: { absolute: "재정경제부 유튜브 모니터링 | 영상 조회수·댓글 수 매일 16시 기록과 질문 댓글 답글 초안" },
   description:
-    "재정경제부 공식 유튜브 영상의 조회수·댓글 수를 하루 3회(10시·14시·17시) 기록하고, 시청자 질문 댓글에는 존댓말 답글 초안을 제안합니다. 홍보 담당자용 서비스입니다. 지금 로그인해서 영상별 증가량과 엑셀 보고 자료를 바로 확인해 보세요. 자동 게시는 하지 않습니다.",
+    "재정경제부 공식 유튜브 영상의 조회수·댓글 수를 매일 오후 4시(16시)에 기록하고, 시청자 질문 댓글에는 존댓말 답글 초안을 제안합니다. 홍보 담당자용 서비스입니다. 지금 로그인해서 영상별 증가량과 PDF 보고 자료를 바로 확인해 보세요. 자동 게시는 하지 않습니다.",
   alternates: { canonical: "/" },
   robots: { index: true, follow: true },
 };
@@ -79,7 +79,7 @@ export default function Home() {
 
           {/* 설명 */}
           <p className="hero-sub absolute left-0 top-[394px] w-[1440px] text-center text-[20.8px] leading-[32px] text-[#464C53]">
-            조회수와 댓글 수를 하루 세 번 기록하고,
+            조회수와 댓글 수를 매일 오후 4시에 기록하고,
             <br />
             시청자 질문에는 답글 초안까지 제안해
             <br />
@@ -153,7 +153,7 @@ export default function Home() {
           한눈에, 숫자로
         </p>
         <p className="mt-4 text-center text-[16px] leading-[26px] text-[#464C53]">
-          조회수와 댓글 수를 하루 세 번 기록하고,
+          조회수와 댓글 수를 매일 오후 4시에 기록하고,
           <br />
           시청자 질문에는 답글 초안까지 제안해
           <br />
@@ -182,9 +182,9 @@ export default function Home() {
       <section aria-label="서비스 소개" className="mx-auto max-w-[960px] px-5 pb-16 pt-8 min-[821px]:pt-16">
         <div className="grid gap-8 min-[821px]:grid-cols-3">
           <div>
-            <h2 className="text-[20px] font-bold" style={{ color: BLUE }}>하루 3회, 숫자를 기록합니다</h2>
+            <h2 className="text-[20px] font-bold" style={{ color: BLUE }}>매일 오후 4시, 숫자를 기록합니다</h2>
             <p className="mt-2 text-[15px] leading-[26px] text-[#464C53]">
-              재정경제부 공식 유튜브의 최근 14일 영상에 대해 조회수와 댓글 수를 10시·14시·17시에 기록하고, 직전 시간대보다 얼마나 늘었는지 보여 드립니다.
+              재정경제부 공식 유튜브의 최근 14일 영상에 대해 조회수와 댓글 수를 매일 오후 4시(15시 30분에 수집)에 기록하고, 전날보다 얼마나 늘었는지 보여 드립니다.
             </p>
           </div>
           <div>

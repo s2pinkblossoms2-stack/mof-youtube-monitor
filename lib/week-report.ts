@@ -2,7 +2,7 @@
 // 저장된 값에서 계산만 하며, 없는 값은 추측하거나 채우지 않는다.
 import { addDays } from "./time";
 import { buildDayReport, type DayDelta, type DayReport, type DayRow } from "./day-report";
-import { REPORT_SLOTS } from "./constants";
+import { ALL_REPORT_SLOTS } from "./constants";
 import type { Video } from "./types";
 
 // 선택한 날짜가 속한 주의 월요일 (달력 계산이라 시간대 영향 없음)
@@ -16,7 +16,7 @@ export type WeekVideo = {
   // 월요일부터 일요일까지 7칸. 아직 오지 않은 날이나 기록 없는 날은 null
   viewDays: (DayDelta | null)[];
   commentDays: (DayDelta | null)[];
-  latestViews: number | null; // 가장 최근 기록의 값 (17시 → 14시 → 10시 순으로 있는 것)
+  latestViews: number | null; // 가장 최근 기록의 값 (그 날의 마지막 보고 시각부터 거꾸로 있는 것)
   latestComments: number | null;
 };
 
@@ -29,7 +29,7 @@ export type WeekReport = {
 };
 
 function latestValue(row: DayRow, pick: "views" | "comments"): number | null {
-  for (const slot of [...REPORT_SLOTS].reverse()) {
+  for (const slot of [...ALL_REPORT_SLOTS].reverse()) {
     const cell = row[pick][slot];
     if (cell.state === "ok") return cell.value;
   }

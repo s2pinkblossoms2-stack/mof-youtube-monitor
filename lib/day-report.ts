@@ -1,7 +1,8 @@
-// 하루치 숫자 화면 만들기 (서버 전용): 한 날짜의 10:00 / 14:00 / 17:00 값을 한 줄에 모으고,
-// 전날 17:00 대비 오늘 17:00의 하루 증감(증감량과 증감률)을 계산한다.
+// 하루치 숫자 화면 만들기 (서버 전용): 한 날짜의 보고 시각 값(2026-10-30부터 16:00 하나, 그 전은 10:00 / 14:00 / 17:00)을 한 줄에 모으고,
+// 전날 마지막 보고 시각 대비 오늘 마지막 보고 시각의 하루 증감(증감량과 증감률)을 계산한다.
 // 저장된 값에서 계산만 하며, 실패하거나 없는 값은 추측하거나 채우지 않는다.
-import { REPORT_SLOTS } from "./constants";
+import { ALL_REPORT_SLOTS } from "./constants";
+import { slotsForDate } from "./time";
 import { calcDelta, type Delta } from "./delta";
 import { getReportData } from "./db/report";
 import { buildReport, effective, metric } from "./report";
@@ -14,7 +15,7 @@ export type SlotCell =
   | { state: "failed" }
   | { state: "ok"; value: number; delta: Delta; manual?: { by: string; autoValue: number | null } };
 
-// 하루 증감: 전날 17:00 → 오늘 17:00. 17:00 수집 전이면 pending.
+// 하루 증감: 전날 마지막 보고 시각 → 오늘 마지막 보고 시각. 오늘 마지막 수집 전이면 pending.
 export type DayDelta =
   | { kind: "pending" }
   | { kind: "unavailable" }
@@ -41,11 +42,14 @@ export type DayReport = {
   rows: DayRow[];
   slots: SlotStatus[];
   channels: Record<ReportSlot, ChannelSnapshot | null>;
-  dayReady: boolean; // 오늘 17:00 수집이 끝나 하루 증감을 보여줄 수 있는지
+  slotNames: ReportSlot[]; // 이 날짜에 쓰는 보고 시각 (2026-10-30부터 ["16:00"], 그 전 ["10:00","14:00","17:00"])
+  finalHour: string; // 이 날의 마지막 보고 시각의 시 ("16시" 등). 하루 증감이 계산되기 시작하는 시각
+  compareLabel: string; // 하루 증감의 비교 기준 글자 ("전날 17시 대비" 등)
+  dayReady: boolean; // 오늘 마지막 보고 시각 수집이 끝나 하루 증감을 보여줄 수 있는지
 };
 
 function emptyCells(): Record<ReportSlot, SlotCell> {
-  return { "10:00": { state: "none" }, "14:00": { state: "none" }, "17:00": { state: "none" } };
+  return Object.fromEntries(ALL_REPORT_SLOTS.map((s) => [s, { state: "none" }])) as Record<ReportSlot, SlotCell>;
 }
 
 function dayDelta(
@@ -64,14 +68,15 @@ function dayDelta(
 }
 
 export async function buildDayReport(date: string): Promise<DayReport> {
-  const datas = await Promise.all(REPORT_SLOTS.map((slot) => getReportData(date, slot)));
+  const slotNames = [...slotsForDate(date)];
+  const datas = await Promise.all(slotNames.map((slot) => getReportData(date, slot)));
   const reports = datas.map(buildReport);
 
   const videos = new Map<string, Video>();
   for (const r of reports) for (const row of r.rows) videos.set(row.video.id, row.video);
 
-  const first = datas[0]; // 10:00 자료의 "직전"은 전날 17:00
-  const last = datas[datas.length - 1]; // 17:00 자료
+  const first = datas[0]; // 하루의 첫 보고 시각 자료의 "직전"은 전날의 마지막 보고 시각
+  const last = datas[datas.length - 1]; // 하루의 마지막 보고 시각 자료
   const yesterday = new Map(first.previous.map((s) => [s.videoId, s]));
   const today = new Map(last.snapshots.map((s) => [s.videoId, s]));
   const dayReady = last.snapshots.length > 0;
@@ -79,7 +84,7 @@ export async function buildDayReport(date: string): Promise<DayReport> {
   const rows: DayRow[] = [...videos.values()].map((video) => {
     const views = emptyCells();
     const comments = emptyCells();
-    REPORT_SLOTS.forEach((slot, i) => {
+    slotNames.forEach((slot, i) => {
       const row = reports[i].rows.find((r) => r.video.id === video.id);
       if (!row) return;
       views[slot] =
@@ -113,16 +118,22 @@ export async function buildDayReport(date: string): Promise<DayReport> {
   });
   rows.sort((a, b) => b.video.uploadedAt.localeCompare(a.video.uploadedAt));
 
+  const channels = Object.fromEntries(ALL_REPORT_SLOTS.map((s) => [s, null])) as Record<ReportSlot, ChannelSnapshot | null>;
+  slotNames.forEach((s, i) => (channels[s] = datas[i].channel));
+
   return {
     date,
     rows,
-    slots: REPORT_SLOTS.map((slot, i) => ({
+    slots: slotNames.map((slot, i) => ({
       slot,
       collectedAt: reports[i].collectedAt,
       videoCount: reports[i].rows.length,
       failedCount: reports[i].failedCount,
     })),
-    channels: { "10:00": datas[0].channel, "14:00": datas[1].channel, "17:00": datas[2].channel },
+    channels,
+    slotNames,
+    finalHour: `${Number(last.slot.slice(0, 2))}시`,
+    compareLabel: `전날 ${Number(first.previousSlot.slot.slice(0, 2))}시 대비`,
     dayReady,
   };
 }

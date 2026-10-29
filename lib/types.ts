@@ -1,8 +1,8 @@
 // 서비스에서 다루는 데이터의 모양이다 (표 구조는 DESIGN.md 3장과 같다).
-import type { EXCLUDE_REASONS, REPORT_SLOTS } from "./constants";
+import type { ALL_REPORT_SLOTS, EXCLUDE_REASONS } from "./constants";
 
-// "10:00" | "14:00" | "17:00"
-export type ReportSlot = (typeof REPORT_SLOTS)[number];
+// "10:00" | "14:00" | "16:00" | "17:00" (지금은 16:00만 새로 기록하고, 나머지는 예전 기록)
+export type ReportSlot = (typeof ALL_REPORT_SLOTS)[number];
 
 export type ExcludeReason = (typeof EXCLUDE_REASONS)[number];
 

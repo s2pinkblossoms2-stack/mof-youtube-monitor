@@ -2,7 +2,8 @@
 // 한글이 깨지지 않도록 Noto Sans KR 글꼴 파일(assets/fonts)을 PDF 안에 넣는다.
 import path from "node:path";
 import PDFDocument from "pdfkit";
-import { LABEL_COLLECT_FAILED, LABEL_DELTA_NEW, LABEL_DELTA_UNAVAILABLE, REPORT_SLOTS } from "./constants";
+import { ALL_REPORT_SLOTS, LABEL_COLLECT_FAILED, LABEL_DELTA_NEW, LABEL_DELTA_UNAVAILABLE } from "./constants";
+import type { ReportSlot } from "./types";
 import type { DayDelta, SlotCell } from "./day-report";
 import { shownSubscribers } from "./report";
 import { buildWeekReport, weekSum, type WeekReport } from "./week-report";
@@ -46,9 +47,9 @@ function pctText(p: number): string {
 }
 
 // 하루 증감 칸 (withPercent: 증감률도 함께)
-function dayDeltaParts(d: DayDelta | null, withPercent: boolean): Part[] {
+function dayDeltaParts(d: DayDelta | null, withPercent: boolean, finalHour = ""): Part[] {
   if (d === null) return [{ text: "-", color: MUTED }];
-  if (d.kind === "pending") return [{ text: "17시 수집 전", color: MUTED }];
+  if (d.kind === "pending") return [{ text: `${finalHour} 수집 전`.trim(), color: MUTED }];
   if (d.kind === "new") return [{ text: LABEL_DELTA_NEW, color: MUTED }];
   if (d.kind === "unavailable") return [{ text: LABEL_DELTA_UNAVAILABLE, color: MUTED }];
   const color = d.value > 0 ? UP : d.value < 0 ? DOWN : MUTED;
@@ -176,12 +177,22 @@ function note(doc: PDFKit.PDFDocument, text: string) {
   doc.moveDown(0.6);
 }
 
+// 이 기간에 쓰인 보고 시각들 (예전 3회 기록과 새 16:00 기록이 한 기간에 섞여 있을 수 있다)
+function weekSlotColumns(week: WeekReport): ReportSlot[] {
+  return ALL_REPORT_SLOTS.filter((s) => week.days.some((d) => d && d.slotNames.includes(s)));
+}
+
 function subscriberRows(week: WeekReport): Cell[][] {
   const rows: Cell[][] = [];
+  const columns = weekSlotColumns(week);
   week.days.forEach((day, i) => {
     if (!day) return;
     const cells: Cell[] = [dayLabel(week.dates[i])];
-    for (const slot of REPORT_SLOTS) {
+    for (const slot of columns) {
+      if (!day.slotNames.includes(slot)) {
+        cells.push({ text: "—", color: MUTED }); // 그 날짜에는 쓰지 않는 보고 시각
+        continue;
+      }
       const shown = shownSubscribers(day.channels[slot]);
       if (shown.kind === "none") cells.push({ text: "수집 전", color: MUTED });
       else if (shown.kind === "failed") cells.push({ text: LABEL_COLLECT_FAILED, color: UP, bold: true });
@@ -243,11 +254,11 @@ export async function buildWeeklyPdf(date: string): Promise<Buffer | null> {
   const left = doc.page.margins.left;
 
   // ── 날짜별 쪽: 월요일 한 장, 화요일 한 장 … (선택한 날짜까지). 한 장에 조회수·댓글 수의 10:00 / 14:00 / 17:00 값과 하루 증감 ──
-  const dayCols: Col[] = [
+  const dayColsFor = (slots: ReportSlot[], compareLabel: string): Col[] => [
     { header: "구분", width: 34 },
-    { header: "제목", width: 220 },
-    ...REPORT_SLOTS.map((s) => ({ header: s, width: 120, align: "right" as const })),
-    { header: "하루 증감\n(전날 17시 대비)", width: 136, align: "right" as const },
+    { header: "제목", width: 770 - 34 - 136 - slots.length * 120 },
+    ...slots.map((s) => ({ header: s, width: 120, align: "right" as const })),
+    { header: `하루 증감\n(${compareLabel})`, width: 136, align: "right" as const },
   ];
   let firstPage = true;
   week.dates.forEach((date, i) => {
@@ -278,7 +289,7 @@ export async function buildWeeklyPdf(date: string): Promise<Buffer | null> {
     }
 
     // 그날의 구독자 수 한 줄
-    const subs = REPORT_SLOTS.map((slot) => {
+    const subs = day.slotNames.map((slot) => {
       const shown = shownSubscribers(day.channels[slot]);
       const text =
         shown.kind === "none" ? "수집 전" : shown.kind === "failed" ? LABEL_COLLECT_FAILED : `${number.format(shown.value)}명${shown.kind === "manual" ? " *" : ""}`;
@@ -302,12 +313,12 @@ export async function buildWeeklyPdf(date: string): Promise<Buffer | null> {
       heading(doc, title, 12);
       drawTable(
         doc,
-        dayCols,
+        dayColsFor(day.slotNames, day.compareLabel),
         day.rows.map((row) => [
           row.video.kind === "short" ? "쇼츠" : "롱폼",
           clean(row.video.title),
-          ...REPORT_SLOTS.map((s) => slotParts(row[pick][s])),
-          dayDeltaParts(row[dayKey], true),
+          ...day.slotNames.map((s) => slotParts(row[pick][s])),
+          dayDeltaParts(row[dayKey], true, day.finalHour),
         ]),
         { rowH, size },
       );
@@ -318,7 +329,7 @@ export async function buildWeeklyPdf(date: string): Promise<Buffer | null> {
     note(doc, `수집 상태: ${status}    * 관리자가 고친 값(구독자 수·조회수·댓글 수)    ▲ 증가(빨강), ▼ 감소(파랑)`);
   });
 
-  // ── 구독자 수 그래프: 월요일부터 수집할 때마다(10:00 / 14:00 / 17:00) 누적 ──
+  // ── 구독자 수 그래프: 월요일부터 수집할 때마다 누적 ──
   doc.addPage();
   doc.x = left;
   doc.y = doc.page.margins.top;
@@ -336,7 +347,7 @@ export async function buildWeeklyPdf(date: string): Promise<Buffer | null> {
       doc,
       [
         { header: "날짜", width: 100 },
-        ...REPORT_SLOTS.map((s) => ({ header: s, width: 150, align: "right" as const })),
+        ...weekSlotColumns(week).map((s) => ({ header: s, width: 150, align: "right" as const })),
       ],
       subRows,
       { rowH: 14, size: 8 },
@@ -356,7 +367,7 @@ export async function buildWeeklyPdf(date: string): Promise<Buffer | null> {
     setFont(doc, true);
     doc.text(`주간 요약: ${title}`, left, doc.y, { lineBreak: false });
     doc.y += 28;
-    note(doc, "하루 증감은 전날 17시 대비 오늘 17시이고, 주간 누적 증감은 이 주에 계산된 하루 증감의 합입니다. 수집에 실패한 값은 추측하거나 채우지 않고 '수집 실패'·'비교 불가'로 표시합니다.");
+    note(doc, "하루 증감은 전날 마지막 보고 시각 대비 오늘 마지막 보고 시각(예: 전날 16시 대비 오늘 16시)이고, 주간 누적 증감은 이 주에 계산된 하루 증감의 합입니다. 수집에 실패한 값은 추측하거나 채우지 않고 '수집 실패'·'비교 불가'로 표시합니다.");
     if (week.videos.length === 0) {
       doc.fillColor(MUTED).fontSize(12);
       setFont(doc, false);
@@ -378,7 +389,7 @@ function drawSubscriberChart(doc: PDFKit.PDFDocument, week: WeekReport): void {
   week.dates.forEach((date, i) => {
     const day = week.days[i];
     if (date > week.upTo || !day) return;
-    for (const slot of REPORT_SLOTS) {
+    for (const slot of day.slotNames) {
       const shown = shownSubscribers(day.channels[slot]);
       if (shown.kind === "none") points.push({ date, slot, state: "none", value: 0, manual: false });
       else if (shown.kind === "failed") points.push({ date, slot, state: "failed", value: 0, manual: false });

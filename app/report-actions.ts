@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { isLoggedIn } from "@/lib/auth";
-import { REPORT_SLOTS } from "@/lib/constants";
+import { ALL_REPORT_SLOTS } from "@/lib/constants";
 import { clearManualCount, saveManualCount } from "@/lib/db/channel";
 import { clearManualVideoCounts, saveManualVideoCounts } from "@/lib/db/snapshots";
 import type { ReportSlot } from "@/lib/types";
@@ -16,7 +16,7 @@ function parseTarget(formData: FormData): { date: string; slot: ReportSlot } | n
   const date = formData.get("date");
   const slot = formData.get("slot");
   if (typeof date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
-  if (typeof slot !== "string" || !(REPORT_SLOTS as readonly string[]).includes(slot)) return null;
+  if (typeof slot !== "string" || !(ALL_REPORT_SLOTS as readonly string[]).includes(slot)) return null;
   return { date, slot: slot as ReportSlot };
 }
 

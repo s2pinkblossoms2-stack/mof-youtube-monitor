@@ -1,4 +1,4 @@
-// 하루 3회 수집 (한국 시간 09:30 / 13:30 / 16:30). 일정은 vercel.json에 있다.
+// 하루 한 번 수집 (한국 시간 15:30, 16:00 기록). 일정은 supabase/cron.sql에 있다.
 import { runCollectGuarded } from "@/lib/collect";
 import { checkCronAuth, errorResponse, resultResponse } from "@/lib/cron";
 

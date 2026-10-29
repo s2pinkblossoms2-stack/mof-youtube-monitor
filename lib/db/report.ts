@@ -10,6 +10,7 @@ export type ReportData = {
   slot: ReportSlot;
   snapshots: VideoSnapshot[]; // 이 보고 시각의 영상별 기록
   previous: VideoSnapshot[]; // 직전 보고 시각의 영상별 기록
+  previousSlot: { date: string; slot: ReportSlot }; // 실제로 비교에 쓴 직전 보고 시각
   previousCollected: boolean; // 직전 보고 시각에 수집이 실제로 있었는지
   videos: Map<string, Video>;
   channel: ChannelSnapshot | null; // 이 보고 시각의 구독자 기록 (없으면 null)
@@ -40,11 +41,21 @@ export async function getLatestReportSlot(): Promise<{ date: string; slot: Repor
 }
 
 export async function getReportData(date: string, slot: ReportSlot): Promise<ReportData> {
-  const prevSlot = previousReportSlot(date, slot);
-  const [snapshots, previous] = await Promise.all([
+  let prevSlot = previousReportSlot(date, slot);
+  const [snapshots, firstTry] = await Promise.all([
     listSlotSnapshots(date, slot),
     listSlotSnapshots(prevSlot.date, prevSlot.slot),
   ]);
+  let previous = firstTry;
+  // 하루 3회에서 하루 1회로 바뀌는 날에는 전날의 마지막 기록이 17:00이라, 하루의 첫 보고 시각은 전날의 다른 마지막 시각도 살펴본다
+  if (previous.length === 0 && (slot === "10:00" || slot === "16:00")) {
+    const other: ReportSlot = prevSlot.slot === "16:00" ? "17:00" : "16:00";
+    const second = await listSlotSnapshots(prevSlot.date, other);
+    if (second.length > 0) {
+      prevSlot = { date: prevSlot.date, slot: other };
+      previous = second;
+    }
+  }
 
   const ids = [...new Set(snapshots.map((s) => s.videoId))];
   const videos = new Map<string, Video>();
@@ -65,5 +76,5 @@ export async function getReportData(date: string, slot: ReportSlot): Promise<Rep
 
   const channel = await getChannelSnapshot(date, slot);
 
-  return { date, slot, snapshots, previous, previousCollected: previous.length > 0, videos, channel };
+  return { date, slot, snapshots, previous, previousSlot: prevSlot, previousCollected: previous.length > 0, videos, channel };
 }

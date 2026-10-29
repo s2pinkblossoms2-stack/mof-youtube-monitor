@@ -9,17 +9,22 @@ export const VIDEO_WINDOW_DAYS = 14;
 // 댓글 저장 기간: 수집한 시각부터 14일 (삭제 기록의 원문도 같은 기간)
 export const COMMENT_RETENTION_DAYS = 14;
 
-// 보고 시각: 화면과 엑셀에 이름표로 쓰는 시각
-export const REPORT_SLOTS = ["10:00", "14:00", "17:00"] as const;
+// 보고 시각: 지금은 하루 한 번, 15:30에 수집해 16:00으로 기록한다 (2026-10-30부터).
+export const REPORT_SLOTS = ["16:00"] as const;
+
+// 2026-10-29까지는 하루 3회(10:00 / 14:00 / 17:00)로 기록했다. 이미 저장된 기록을 계속 보여 주기 위해 남겨 둔다.
+export const LEGACY_REPORT_SLOTS = ["10:00", "14:00", "17:00"] as const;
+
+// 저장하거나 보여 줄 수 있는 모든 보고 시각 (시간순)
+export const ALL_REPORT_SLOTS = ["10:00", "14:00", "16:00", "17:00"] as const;
+
+// 하루 한 번 기록으로 바뀐 첫 날 (이 날부터 REPORT_SLOTS, 그 전 날짜는 LEGACY_REPORT_SLOTS를 쓴다)
+export const SINGLE_SLOT_FROM = "2026-10-30";
 
 // 수집 시각 창: 이 시간 안에 실행된 수집은 해당 보고 시각의 값으로 저장한다. (끝 시각은 포함하지 않음)
 // Vercel의 자동 실행은 정시보다 한 시간 가까이 늦어질 수 있어서(요금제에 따라), 창을 보고 시각 이후 30분까지 넉넉히 잡는다.
 // 5분 뒤 재시도가 돌아도 같은 보고 시각으로 묶인다.
-export const COLLECT_WINDOWS = [
-  { start: "09:30", end: "10:30", slot: "10:00" },
-  { start: "13:30", end: "14:30", slot: "14:00" },
-  { start: "16:30", end: "17:30", slot: "17:00" },
-] as const;
+export const COLLECT_WINDOWS = [{ start: "15:30", end: "16:30", slot: "16:00" }] as const;
 
 // 실패한 수집을 다시 시도하기까지의 분 (자동 실행은 수집 +5분에 돈다)
 export const RETRY_DELAY_MINUTES = 5;

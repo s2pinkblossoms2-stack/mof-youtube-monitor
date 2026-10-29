@@ -1,4 +1,4 @@
-// 수집 5분 뒤 실행 (한국 시간 09:35 / 13:35 / 16:35):
+// 수집 5분 뒤 실행 (한국 시간 15:35):
 // ① 실패한 영상만 다시 받고 ② 새 댓글을 모아 분류하고 ③ 질문 댓글에 답글 초안을 만든다.
 import { classifyPending, collectNewComments, draftPending } from "@/lib/comments/pipeline";
 import { runRetry } from "@/lib/collect";

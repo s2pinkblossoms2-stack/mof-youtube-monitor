@@ -2,7 +2,9 @@
 // 서버(Vercel)는 세계 표준시로 돌기 때문에, 날짜와 시각은 항상 여기서 한국 시간으로 바꿔 쓴다.
 import {
   COLLECT_WINDOWS,
+  LEGACY_REPORT_SLOTS,
   REPORT_SLOTS,
+  SINGLE_SLOT_FROM,
   TIME_ZONE,
   VIDEO_WINDOW_DAYS,
 } from "./constants";
@@ -61,7 +63,7 @@ export function formatKstDateTime(iso: string): string {
 }
 
 // 수집한 시각이 어느 보고 시각에 속하는지. 수집 시각 창 밖이면 null.
-// 예: 09:30~09:59 → "10:00" (09:35 재시도도 같은 보고 시각)
+// 예: 15:30~16:29 → "16:00" (15:35 재시도도 같은 보고 시각)
 export function reportSlotFor(collectedAt: Date): { date: string; slot: ReportSlot } | null {
   const { day, minutes } = toKst(collectedAt);
   const win = COLLECT_WINDOWS.find(
@@ -70,11 +72,17 @@ export function reportSlotFor(collectedAt: Date): { date: string; slot: ReportSl
   return win ? { date: day, slot: win.slot } : null;
 }
 
-// 직전 보고 시각: 10:00은 전날 17:00, 14:00은 10:00, 17:00은 14:00
+// 그 날짜에 쓰는 보고 시각들: 2026-10-30부터는 16:00 하나, 그 전은 예전 방식(10:00 / 14:00 / 17:00)
+export function slotsForDate(date: string): readonly ReportSlot[] {
+  return date >= SINGLE_SLOT_FROM ? REPORT_SLOTS : LEGACY_REPORT_SLOTS;
+}
+
+// 직전 보고 시각: 14:00은 10:00, 17:00은 14:00, 하루의 첫 보고 시각(10:00·16:00)은 전날의 마지막 보고 시각.
+// 전날의 마지막은 예전 방식이면 17:00, 새 방식이면 16:00이다 (처음 바뀌는 날은 db/report.ts에서 둘 다 살펴본다).
 export function previousReportSlot(date: string, slot: ReportSlot): { date: string; slot: ReportSlot } {
-  const i = REPORT_SLOTS.indexOf(slot);
-  if (i === 0) return { date: addDays(date, -1), slot: REPORT_SLOTS[REPORT_SLOTS.length - 1] };
-  return { date, slot: REPORT_SLOTS[i - 1] };
+  if (slot === "14:00") return { date, slot: "10:00" };
+  if (slot === "17:00") return { date, slot: "14:00" };
+  return { date: addDays(date, -1), slot: slot === "16:00" ? "16:00" : "17:00" };
 }
 
 // 업로드일 기준 최근 14일(오늘 포함) 안의 영상인지. 업로드한 지 14일이 되면 대상에서 뺀다.
