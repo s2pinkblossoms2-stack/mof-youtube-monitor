@@ -81,7 +81,7 @@ async function collectChannel(now: Date, date: string, slot: ReportSlot): Promis
   }
 }
 
-// 하루 3회 수집(영상 + 구독자 수). 수집 시각 창(09:30~09:59 등) 밖이면 저장하지 않는다.
+// 하루 한 번 수집(영상 + 구독자 수). 수집 시각 창(15:30~16:29) 밖이면 저장하지 않는다.
 export async function runCollect(now: Date): Promise<CollectResult> {
   const result = await collectVideos(now);
   const where = reportSlotFor(now);

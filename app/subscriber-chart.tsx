@@ -1,8 +1,8 @@
 // 구독자 수 그래프 (서버 컴포넌트, 순수 SVG): 수집할 때마다 점을 하나씩 찍고 값을 그대로 적는다.
 // 값 글자는 위·아래로 번갈아 놓아 서로 겹치지 않게 하고, 값은 반올림 없이 저장된 숫자 그대로 보여 준다.
 // 수집 실패인 시각은 점을 찍지 않고 "실패"로 표시하며, 선도 잇지 않는다 (값을 추측해 채우지 않음).
-import { REPORT_SLOTS } from "@/lib/constants";
 import { shownSubscribers } from "@/lib/report";
+import { slotsForDate } from "@/lib/time";
 import type { ChannelSnapshot, ReportSlot } from "@/lib/types";
 
 const number = new Intl.NumberFormat("ko-KR");
@@ -27,7 +27,8 @@ function toPoints(snapshots: ChannelSnapshot[]): Point[] {
   const bySlot = new Map(snapshots.map((s) => [`${s.reportDate} ${s.reportSlot}`, s]));
   const points: Point[] = [];
   for (const date of dates) {
-    for (const slot of REPORT_SLOTS) {
+    // 날짜마다 그 날짜에 쓰는 보고 시각만 점으로 찍는다 (2026-10-30부터 16:00 하나, 그 전은 10:00 / 14:00 / 17:00)
+    for (const slot of slotsForDate(date)) {
       const shown = shownSubscribers(bySlot.get(`${date} ${slot}`) ?? null);
       if (shown.kind === "none") points.push({ date, slot, state: "none", value: 0, manual: false });
       else if (shown.kind === "failed") points.push({ date, slot, state: "failed", value: 0, manual: false });

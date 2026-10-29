@@ -1,5 +1,5 @@
 -- 자동 실행 일정 (Supabase pg_cron + pg_net이 Vercel의 자동 실행 주소를 정해진 시각에 부른다)
--- Vercel 무료(Hobby) 요금제는 자동 실행이 하루 1회로 제한돼서, 하루 3회 정시 수집을 위해 Supabase가 대신 부른다.
+-- Vercel 무료(Hobby) 요금제는 자동 실행이 하루 1회로 제한돼서, 정시 수집을 위해 Supabase가 대신 부른다 (지금은 하루 한 번).
 -- 시각은 세계 표준시(UTC)이고, 한국 시간(KST)은 +9시간이다.
 --
 -- 이 파일에는 비밀 값이 없다. __APP_URL__ 과 __CRON_SECRET__ 은 scripts/apply-supabase-cron.mjs가
@@ -11,8 +11,8 @@ create extension if not exists pg_net;
 -- 다시 적용해도 중복되지 않도록 같은 이름의 일정은 먼저 지운다
 select cron.unschedule(jobname) from cron.job where jobname like 'mof-%';
 
--- 수집: 한국 시간 매일 09:30 / 13:30 / 16:30
-select cron.schedule('mof-collect', '30 0,4,7 * * *', $job$
+-- 수집: 한국 시간 매일 15:30 (UTC 06:30), 16:00 기록
+select cron.schedule('mof-collect', '30 6 * * *', $job$
   select net.http_get(
     url := '__APP_URL__/api/cron/collect',
     headers := jsonb_build_object('Authorization', 'Bearer __CRON_SECRET__'),
@@ -20,8 +20,8 @@ select cron.schedule('mof-collect', '30 0,4,7 * * *', $job$
   );
 $job$);
 
--- 재시도·댓글 분류·초안: 한국 시간 매일 09:35 / 13:35 / 16:35
-select cron.schedule('mof-retry-and-draft', '35 0,4,7 * * *', $job$
+-- 재시도·댓글 분류·초안: 한국 시간 매일 15:35 (UTC 06:35)
+select cron.schedule('mof-retry-and-draft', '35 6 * * *', $job$
   select net.http_get(
     url := '__APP_URL__/api/cron/retry-and-draft',
     headers := jsonb_build_object('Authorization', 'Bearer __CRON_SECRET__'),

@@ -127,3 +127,11 @@ alter table public.video_snapshots add constraint video_snapshots_manual_pair ch
   (manual_view_count is null and manual_comment_count is null and manual_by is null and manual_at is null)
   or (manual_view_count is not null and manual_comment_count is not null and manual_by is not null and manual_at is not null)
 );
+
+-- 보고 시각 16:00 추가 (2026-10-30부터 하루 한 번: 15:30 수집, 16:00 기록). 예전 10:00 / 14:00 / 17:00 기록은 그대로 둔다.
+alter table public.video_snapshots drop constraint if exists video_snapshots_report_slot_check;
+alter table public.video_snapshots add constraint video_snapshots_report_slot_check
+  check (report_slot in ('10:00', '14:00', '16:00', '17:00'));
+alter table public.channel_snapshots drop constraint if exists channel_snapshots_report_slot_check;
+alter table public.channel_snapshots add constraint channel_snapshots_report_slot_check
+  check (report_slot in ('10:00', '14:00', '16:00', '17:00'));
