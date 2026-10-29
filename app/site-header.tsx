@@ -47,7 +47,9 @@ export default function SiteHeader({ current, title, subtitle }: Props) {
           재정경제부 공식 유튜브
         </span>
         <h1 className="mt-4 text-[32px] font-bold leading-tight tracking-[-0.03em] text-ink sm:text-[44px]">{title}</h1>
-        <p className="mx-auto mt-3 max-w-xl text-[16px] leading-7 text-muted">{subtitle}</p>
+        {/* 설명 글에 줄바꿈(
+)이 있으면 그 자리에서 줄을 바꾼다 */}
+        <p className="mx-auto mt-3 max-w-xl whitespace-pre-line text-[16px] leading-7 text-muted">{subtitle}</p>
       </div>
     </header>
   );
