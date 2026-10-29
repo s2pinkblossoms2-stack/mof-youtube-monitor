@@ -236,8 +236,13 @@ function weekMatrixCols(week: WeekReport, metricName: string): Col[] {
   ];
 }
 
+// 저장소에서 그 주의 값을 읽어 PDF로 만든다
 export async function buildWeeklyPdf(date: string): Promise<Buffer | null> {
-  const week = await buildWeekReport(date);
+  return renderWeeklyPdf(await buildWeekReport(date));
+}
+
+// 모아 둔 주간 자료를 PDF로 그린다 (저장소를 읽지 않으므로 견본 자료로도 모양을 볼 수 있다)
+export async function renderWeeklyPdf(week: WeekReport): Promise<Buffer | null> {
   if (week.videos.length === 0 && week.days.every((d) => d === null)) return null;
 
   const doc = new PDFDocument({ size: "A4", layout: "landscape", margin: 36, bufferPages: false, info: { Title: `주간 누적 보고 ${week.monday}~${week.upTo}`, Author: "재정경제부 유튜브 모니터링" } });
