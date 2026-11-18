@@ -1,10 +1,9 @@
 // 숫자 화면의 내용 (서버 컴포넌트). 한 날짜의 보고 시각 값(2026-10-30부터 16:00 하나, 그 전은 10:00 / 14:00 / 17:00)을 한 화면에 모아 보여 주고,
 // 전날 마지막 보고 시각 대비 하루 증감과 구독자 수 그래프를 함께 보여 준다. 저장된 값을 읽어 보여주기만 하고 고치지 않는다.
 import { LABEL_COLLECT_FAILED, LABEL_DELTA_NEW, LABEL_DELTA_UNAVAILABLE } from "@/lib/constants";
-import type { Delta } from "@/lib/delta";
 import { listChannelSnapshotsUpTo } from "@/lib/db/channel";
 import { getLatestReportSlot, listReportDates } from "@/lib/db/report";
-import { buildDayReport, type DayDelta, type DayReport, type DayRow, type SlotCell } from "@/lib/day-report";
+import { buildDayReport, type DayDelta, type DayReport, type DayRow, type SlotCell, type TopGrowth } from "@/lib/day-report";
 import { shownSubscribers } from "@/lib/report";
 import { formatKstDateTime, formatKstTime } from "@/lib/time";
 import SubscriberChart from "./subscriber-chart";
@@ -23,29 +22,6 @@ function signed(v: number): string {
   return v > 0 ? `+${number.format(v)}` : number.format(v); // 줄었으면 음수 그대로
 }
 
-// 한눈에 보이도록 증가는 빨강 ▲, 감소는 파랑 ▼ (한국 금융 화면의 관례). 색만으로 구분하지 않도록 화살표와 부호(+/-)를 함께 쓴다.
-// 화살표는 화면에만 그리는 장식(CSS)이라, 보고서에 복사해 붙여넣어도 "(+320)"처럼 숫자만 복사된다.
-function DeltaText({ delta }: { delta: Delta }) {
-  if (delta.kind === "new") return <span className="text-muted">({LABEL_DELTA_NEW})</span>;
-  if (delta.kind === "unavailable") return <span className="text-muted">({LABEL_DELTA_UNAVAILABLE})</span>;
-  const v = delta.value;
-  if (v > 0) {
-    return (
-      <span className="font-medium text-red-700">
-        (<span className="before:content-['▲_']">{signed(v)}</span>)
-      </span>
-    );
-  }
-  if (v < 0) {
-    return (
-      <span className="font-medium text-blue-700">
-        (<span className="before:content-['▼_']">{signed(v)}</span>)
-      </span>
-    );
-  }
-  return <span className="text-muted">({signed(v)})</span>;
-}
-
 function Failed() {
   return <span className="font-medium text-red-600">{LABEL_COLLECT_FAILED}</span>;
 }
@@ -60,12 +36,12 @@ function SlotCellView({ cell }: { cell: SlotCell }) {
         <span className="text-amber-800" title={`관리자가 고친 값 (${cell.manual.by})`}>
           *
         </span>
-      )}{" "}
-      <DeltaText delta={cell.delta} />
+      )}
     </span>
   );
 }
 
+// 한눈에 보이도록 증가는 빨강 ▲, 감소는 파랑 ▼ (한국 금융 화면의 관례). 색만으로 구분하지 않도록 화살표와 부호(+/-)를 함께 쓴다.
 // 하루 증감 칸: 전날 마지막 보고 시각 → 오늘 마지막 보고 시각 (증감량과 증감률)
 function DayDeltaView({ delta, finalHour }: { delta: DayDelta; finalHour: string }) {
   if (delta.kind === "pending") return <span className="text-muted">{finalHour} 수집 후 표시</span>;
@@ -96,13 +72,14 @@ function VideoLink({ row }: { row: DayRow }) {
 // 지표(조회수 또는 댓글 수) 하나의 표: 그 날짜의 보고 시각 칸들 + 하루 증감
 function MetricTable({ title, report, pick }: { title: string; report: DayReport; pick: "views" | "comments" }) {
   const { rows, slotNames } = report;
+  const topId = (pick === "views" ? report.topViews : report.topComments)?.video.id;
   return (
     <section>
       <h2 className="mb-2 text-lg font-bold text-brand">{title}</h2>
       <div className="overflow-x-auto rounded-2xl border border-brand-line bg-white">
         <table className="w-full min-w-[56rem] text-left text-sm">
           <caption className="sr-only">
-            영상별 {title}: 보고 시각 {slotNames.join(", ")} 값(괄호는 직전 보고 시각 대비 증가량)과 {report.compareLabel}의 하루 증감
+            영상별 {title}: 보고 시각 {slotNames.join(", ")} 값과 {report.compareLabel}의 하루 증감
           </caption>
           <thead className="bg-brand-wash text-brand">
             <tr>
@@ -122,10 +99,16 @@ function MetricTable({ title, report, pick }: { title: string; report: DayReport
           </thead>
           <tbody>
             {rows.map((row) => (
-              <tr key={row.video.id} className="border-t border-brand-line/60 hover:bg-brand-wash/60">
+              <tr
+                key={row.video.id}
+                className={`border-t border-brand-line/60 hover:bg-brand-wash/60 ${row.video.id === topId ? "bg-amber-50" : ""}`}
+              >
                 <td className="px-3 py-2 whitespace-nowrap">{row.video.kind === "short" ? "쇼츠" : "롱폼"}</td>
                 <td className="min-w-[16rem] px-3 py-2">
                   <VideoLink row={row} />
+                  {row.video.id === topId && (
+                    <span className="ml-2 rounded-full bg-amber-200 px-2 py-0.5 text-xs font-bold text-amber-900">오늘 최다 증가</span>
+                  )}
                   <span className="block text-xs text-muted">{row.video.uploadedAt.slice(0, 10)} 업로드</span>
                 </td>
                 {slotNames.map((s) => (
@@ -141,6 +124,46 @@ function MetricTable({ title, report, pick }: { title: string; report: DayReport
           </tbody>
         </table>
       </div>
+    </section>
+  );
+}
+
+// 그날 하루 증감이 가장 큰 영상 (조회수·댓글 수 각각)
+function TopGrowthCard({ report }: { report: DayReport }) {
+  const item = (label: string, unit: string, top: TopGrowth | null) => (
+    <li className="flex flex-wrap items-baseline gap-x-3">
+      <span className="w-16 text-sm text-muted">{label}</span>
+      {top === null ? (
+        <span className="text-sm text-muted">늘어난 영상이 없습니다</span>
+      ) : (
+        <span>
+          <a
+            href={`https://www.youtube.com/watch?v=${top.video.id}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium text-ink hover:underline"
+          >
+            {top.video.title}
+          </a>{" "}
+          <span className="font-bold text-red-700">
+            <span className="before:content-['▲_']">{signed(top.value)}</span>
+            {unit}
+          </span>
+        </span>
+      )}
+    </li>
+  );
+  return (
+    <section className="rounded-2xl border border-amber-300 bg-amber-50 p-5">
+      <h2 className="text-sm font-medium text-amber-900">오늘 가장 많이 늘어난 영상 ({report.compareLabel})</h2>
+      {report.dayReady ? (
+        <ul className="mt-2 space-y-1">
+          {item("조회수", "회", report.topViews)}
+          {item("댓글 수", "개", report.topComments)}
+        </ul>
+      ) : (
+        <p className="mt-2 text-sm text-muted">{report.finalHour} 수집이 끝나면 표시됩니다.</p>
+      )}
     </section>
   );
 }
@@ -290,6 +313,8 @@ export default async function ReportView({ searchParams }: { searchParams: Promi
           </p>
         )}
       </div>
+
+      <TopGrowthCard report={report} />
 
       <div className="grid gap-4 md:grid-cols-2">
         <SubscriberCard report={report} />

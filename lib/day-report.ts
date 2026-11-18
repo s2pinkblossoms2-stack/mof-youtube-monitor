@@ -3,17 +3,17 @@
 // 저장된 값에서 계산만 하며, 실패하거나 없는 값은 추측하거나 채우지 않는다.
 import { ALL_REPORT_SLOTS } from "./constants";
 import { slotsForDate } from "./time";
-import { calcDelta, type Delta } from "./delta";
+import { calcDelta } from "./delta";
 import { getReportData } from "./db/report";
 import { buildReport, effective, metric } from "./report";
 import type { ChannelSnapshot, ReportSlot, Video, VideoSnapshot } from "./types";
 
-// 한 보고 시각 칸: 아직 기록 없음 / 수집 실패 / 값과 직전 보고 시각 대비 증가량
+// 한 보고 시각 칸: 아직 기록 없음 / 수집 실패 / 값 (증감량은 "하루 증감" 칸에만 보여 준다)
 // manual: 관리자가 고친 값이면 고친 사람과 자동 수집한 원래 값
 export type SlotCell =
   | { state: "none" }
   | { state: "failed" }
-  | { state: "ok"; value: number; delta: Delta; manual?: { by: string; autoValue: number | null } };
+  | { state: "ok"; value: number; manual?: { by: string; autoValue: number | null } };
 
 // 하루 증감: 전날 마지막 보고 시각 → 오늘 마지막 보고 시각. 오늘 마지막 수집 전이면 pending.
 export type DayDelta =
@@ -30,6 +30,9 @@ export type DayRow = {
   commentDay: DayDelta;
 };
 
+// 그날 하루 증감이 가장 큰 영상 (증가한 영상이 없으면 null)
+export type TopGrowth = { video: Video; value: number; percent: number | null };
+
 export type SlotStatus = {
   slot: ReportSlot;
   collectedAt: string | null;
@@ -40,6 +43,8 @@ export type SlotStatus = {
 export type DayReport = {
   date: string;
   rows: DayRow[];
+  topViews: TopGrowth | null; // 조회수가 가장 많이 늘어난 영상
+  topComments: TopGrowth | null; // 댓글 수가 가장 많이 늘어난 영상
   slots: SlotStatus[];
   channels: Record<ReportSlot, ChannelSnapshot | null>;
   slotNames: ReportSlot[]; // 이 날짜에 쓰는 보고 시각 (2026-10-30부터 ["16:00"], 그 전 ["10:00","14:00","17:00"])
@@ -47,6 +52,17 @@ export type DayReport = {
   compareLabel: string; // 하루 증감의 비교 기준 글자 ("전날 17시 대비" 등)
   dayReady: boolean; // 오늘 마지막 보고 시각 수집이 끝나 하루 증감을 보여줄 수 있는지
 };
+
+// 하루 증감이 가장 큰 영상 하나. 늘어난 영상(증감량 > 0)만 대상이며, 같으면 최근에 올린 영상이 앞선다.
+function topGrowth(rows: DayRow[], pick: "viewDay" | "commentDay"): TopGrowth | null {
+  let best: TopGrowth | null = null;
+  for (const row of rows) {
+    const d = row[pick];
+    if (d.kind !== "change" || d.value <= 0) continue;
+    if (best === null || d.value > best.value) best = { video: row.video, value: d.value, percent: d.percent };
+  }
+  return best;
+}
 
 function emptyCells(): Record<ReportSlot, SlotCell> {
   return Object.fromEntries(ALL_REPORT_SLOTS.map((s) => [s, { state: "none" }])) as Record<ReportSlot, SlotCell>;
@@ -93,7 +109,6 @@ export async function buildDayReport(date: string): Promise<DayReport> {
           : {
               state: "ok",
               value: row.viewCount,
-              delta: row.viewDelta,
               manual: row.manual ? { by: row.manual.by, autoValue: row.manual.autoView } : undefined,
             };
       comments[slot] =
@@ -102,7 +117,6 @@ export async function buildDayReport(date: string): Promise<DayReport> {
           : {
               state: "ok",
               value: row.commentCount,
-              delta: row.commentDelta,
               manual: row.manual ? { by: row.manual.by, autoValue: row.manual.autoComment } : undefined,
             };
     });
@@ -124,6 +138,8 @@ export async function buildDayReport(date: string): Promise<DayReport> {
   return {
     date,
     rows,
+    topViews: topGrowth(rows, "viewDay"),
+    topComments: topGrowth(rows, "commentDay"),
     slots: slotNames.map((slot, i) => ({
       slot,
       collectedAt: reports[i].collectedAt,
