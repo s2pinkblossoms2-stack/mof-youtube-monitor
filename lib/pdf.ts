@@ -4,7 +4,7 @@ import path from "node:path";
 import PDFDocument from "pdfkit";
 import { ALL_REPORT_SLOTS, LABEL_COLLECT_FAILED, LABEL_DELTA_NEW, LABEL_DELTA_UNAVAILABLE } from "./constants";
 import type { ReportSlot } from "./types";
-import type { DayDelta, SlotCell } from "./day-report";
+import type { DayDelta, SlotCell, TopGrowth } from "./day-report";
 import { shownSubscribers } from "./report";
 import { buildWeekReport, weekSum, type WeekReport } from "./week-report";
 
@@ -59,20 +59,13 @@ function dayDeltaParts(d: DayDelta | null, withPercent: boolean, finalHour = "")
   return parts;
 }
 
-// 보고 시각 칸: 값과 직전 보고 시각 대비 증가량
+// 보고 시각 칸: 값만 보여 준다 (증감량은 "하루 증감" 칸에만 적는다)
 function slotParts(cell: SlotCell): Part[] {
   if (cell.state === "none") return [{ text: "—", color: MUTED }];
   if (cell.state === "failed") return [{ text: LABEL_COLLECT_FAILED, color: UP, bold: true }];
   const parts: Part[] = [{ text: number.format(cell.value) }];
   // 관리자가 고친 값에는 *를 붙인다
   if (cell.manual) parts.push({ text: "*", color: "#92400e", bold: true });
-  const d = cell.delta;
-  if (d.kind === "new") parts.push({ text: ` (${LABEL_DELTA_NEW})`, color: MUTED });
-  else if (d.kind === "unavailable") parts.push({ text: ` (${LABEL_DELTA_UNAVAILABLE})`, color: MUTED });
-  else {
-    const color = d.value > 0 ? UP : d.value < 0 ? DOWN : MUTED;
-    parts.push({ text: ` (${d.value > 0 ? "▲ " : d.value < 0 ? "▼ " : ""}${signed(d.value)})`, color });
-  }
   return parts;
 }
 
@@ -305,6 +298,40 @@ export async function renderWeeklyPdf(week: WeekReport): Promise<Buffer | null> 
     doc.text(`구독자 수   ${subs}`, left, doc.y, { lineBreak: false });
     doc.y += 22;
 
+    // 그날 하루 증감이 가장 큰 영상 (조회수·댓글 수 각각)
+    const topLine = (label: string, unit: string, top: TopGrowth | null): Part[] => [
+      { text: `${label}  `, color: MUTED },
+      ...(top === null
+        ? [{ text: "늘어난 영상 없음", color: MUTED }]
+        : [
+            { text: clean(top.video.title), bold: true },
+            { text: `   ▲ ${signed(top.value)}${unit}${top.percent !== null ? ` (${pctText(top.percent)})` : ""}`, color: UP, bold: true },
+          ]),
+    ];
+    if (day.rows.some((r) => r.viewDay.kind === "change" || r.commentDay.kind === "change")) {
+      const x = left;
+      const w = doc.page.width - left * 2;
+      const y0 = doc.y;
+      doc.rect(x, y0, w, 44).fill("#fffbeb");
+      doc.rect(x, y0, w, 44).lineWidth(0.8).strokeColor("#fcd34d").stroke();
+      doc.fillColor("#78350f").fontSize(9);
+      setFont(doc, true);
+      doc.text(`오늘 가장 많이 늘어난 영상 (${day.compareLabel})`, x + 8, y0 + 6, { lineBreak: false });
+      [topLine("조회수", "회", day.topViews), topLine("댓글 수", "개", day.topComments)].forEach((parts, k) => {
+        let tx = x + 8;
+        const ty = y0 + 18 + k * 12;
+        for (const p of parts) {
+          setFont(doc, p.bold);
+          doc.fillColor(p.color ?? INK).fontSize(9);
+          const text = ellipsize(doc, p.text, x + w - 8 - tx, 9);
+          doc.text(text, tx, ty, { lineBreak: false });
+          setFont(doc, p.bold);
+          tx += doc.widthOfString(text);
+        }
+      });
+      doc.y = y0 + 54;
+    }
+
     // 영상이 많아도 한 장에 들어가도록 줄 높이와 글자 크기를 줄인다
     const n = day.rows.length;
     const available = doc.page.height - doc.page.margins.bottom - 14 - doc.y - 190;
@@ -331,7 +358,7 @@ export async function renderWeeklyPdf(week: WeekReport): Promise<Buffer | null> 
     const status = day.slots
       .map((s) => `${s.slot} ${s.videoCount === 0 ? "기록 없음" : `${s.videoCount}개${s.failedCount > 0 ? ` (수집 실패 ${s.failedCount}개)` : ""}`}`)
       .join("   ");
-    note(doc, `수집 상태: ${status}    * 관리자가 고친 값(구독자 수·조회수·댓글 수)    ▲ 증가(빨강), ▼ 감소(파랑)`);
+    note(doc, `수집 상태: ${status}    * 관리자가 고친 값(구독자 수·조회수·댓글 수)    ▲ 증가(빨강), ▼ 감소(파랑)    증감량은 하루 증감 칸에만 표시`);
   });
 
   // ── 구독자 수 그래프: 월요일부터 수집할 때마다 누적 ──
