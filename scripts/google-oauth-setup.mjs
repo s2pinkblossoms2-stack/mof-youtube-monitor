@@ -1,6 +1,6 @@
 // 채널 관리자 인증(OAuth)을 처음 한 번 받아서 .env에 저장하는 도구다 (내 컴퓨터에서만 실행).
 //
-// 사용법: 프로젝트 폴더에서  node scripts/google-oauth-setup.mjs
+// 사용법: 프로젝트 폴더에서  node scripts/google-oauth-setup.mjs [--readonly]
 //  1) 터미널에 나오는 주소를 크롬에 붙여넣어 연다.
 //  2) 재정경제부 채널 관리 권한이 있는 구글 계정으로 로그인하고, 채널을 고른 뒤 권한을 허용한다.
 //  3) 끝나면 GOOGLE_OAUTH_REFRESH_TOKEN이 .env에 저장된다. 토큰 값은 화면에 출력하지 않는다.
@@ -12,8 +12,10 @@ import { createServer } from "node:http";
 
 const ENV_PATH = new URL("../.env", import.meta.url);
 // youtube.force-ssl: 댓글 읽기·삭제 / yt-analytics.readonly: 구독자 정확값 계산에 쓰는 보고서 읽기
+// --readonly: 삭제·수정 권한(youtube.force-ssl)을 빼고 구독자 수 계산용 읽기 권한만 요청한다.
+const READONLY = process.argv.includes("--readonly");
 const SCOPES = [
-  "https://www.googleapis.com/auth/youtube.force-ssl",
+  ...(READONLY ? [] : ["https://www.googleapis.com/auth/youtube.force-ssl"]),
   "https://www.googleapis.com/auth/yt-analytics.readonly",
 ];
 const TIMEOUT_MS = 10 * 60 * 1000;
