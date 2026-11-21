@@ -8,7 +8,8 @@ export function proxy(request: NextRequest) {
   // 로그인 화면과 메인 화면(/)은 로그인 없이 볼 수 있다. 메인 화면에는 유튜브에 공개된 영상 썸네일만 있고,
   // 숫자·댓글·엑셀은 계속 로그인이 필요하다.
   // robots.txt는 검색 로봇이 로그인 없이 읽어야 한다 (내용은 메인만 열고 나머지는 막는다)
-  if (pathname === "/login" || pathname === "/" || pathname === "/robots.txt") return NextResponse.next();
+  // 개인정보처리방침(/privacy)은 구글 앱 확인에 쓰이는 공개 화면이라 로그인 없이 연다.
+  if (pathname === "/login" || pathname === "/" || pathname === "/robots.txt" || pathname === "/privacy") return NextResponse.next();
   if (verifySessionToken(request.cookies.get(SESSION_COOKIE)?.value)) return NextResponse.next();
 
   // 화면이 아닌 요청(API, 저장 동작)은 로그인 화면으로 보내지 않고 거절한다
