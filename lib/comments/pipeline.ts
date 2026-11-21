@@ -64,7 +64,10 @@ export async function draftPending(deadline: number, limit = 50): Promise<{ draf
       }),
     );
     for (const r of results) {
-      if (r.status !== "fulfilled") continue;
+      if (r.status !== "fulfilled") {
+        console.error("답글 초안 실패:", r.reason instanceof Error ? r.reason.message : "알 수 없는 오류");
+        continue;
+      }
       drafted++;
       if (r.value.needsCheck) needsCheck++;
     }
@@ -93,7 +96,11 @@ export async function classifyPending(deadline: number, limit = 200): Promise<Om
     const group = batches.slice(i, i + PARALLEL_BATCHES);
     const results = await Promise.allSettled(group.map((b) => classifyBatch(b)));
     for (const r of results) {
-      if (r.status !== "fulfilled") continue; // 실패한 묶음은 다음 실행에서 다시
+      if (r.status !== "fulfilled") {
+        // 실패한 묶음은 다음 실행에서 다시 하되, 원인을 알 수 있게 오류 종류를 기록한다 (요청 내용·키는 남기지 않음)
+        console.error("댓글 분류 실패:", r.reason instanceof Error ? r.reason.message : "알 수 없는 오류");
+        continue;
+      }
       for (const [id, cls] of r.value) {
         await saveClassification(id, cls);
         classified++;
